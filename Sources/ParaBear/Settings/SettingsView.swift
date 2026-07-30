@@ -7,7 +7,7 @@ struct SettingsView: View {
         Form {
             Section("Bear") {
                 Toggle("Enable reminder flights", isOn: $settings.isBearVisible)
-                Picker("Planned speed", selection: $settings.plannedFlightSpeed) {
+                Picker("Drop speed", selection: $settings.plannedFlightSpeed) {
                     ForEach(PlannedFlightSpeed.allCases) { speed in
                         Text(speed.title).tag(speed)
                     }

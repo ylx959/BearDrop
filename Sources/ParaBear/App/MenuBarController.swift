@@ -92,7 +92,7 @@ final class MenuBarController {
     }
 
     private func speedRow() -> NSView {
-        let title = NSTextField(labelWithString: "Planned speed")
+        let title = NSTextField(labelWithString: "Drop speed")
         title.font = .systemFont(ofSize: 11, weight: .medium)
         title.textColor = .secondaryLabelColor
 

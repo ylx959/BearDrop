@@ -5,12 +5,12 @@ ParaBear is a native macOS desktop companion designed to keep your schedule out 
 ## Function
 The menu bar control follows the compact utility pattern:
 
-![menu_bar function](/Users/yanglinxuan/Documents/BearDrop/Sources/ParaBear/Assets/menu_bar.jpg)
+![menu_bar function](Sources/ParaBear/Assets/menu_bar.png)
 
 - Calendar connection status
 - Dropped speed: Slow / Normal / Fast
 - Appearence: Bright/Dark mode
-- Test ParaBear
+- Call ParaBear
 - Quit ParaBear
 
 Calendar updates are intentionally simple: ParaBear polls Apple Calendar every 60 seconds, reads only events in the next hour, and keeps an in-memory reminder key set so the same milestone does not fire twice.
