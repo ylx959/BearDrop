@@ -16,6 +16,12 @@ struct SettingsView: View {
                 Slider(value: $settings.animationIntensity, in: 0.4...1.6) {
                     Text("Animation")
                 }
+                Picker("Wind", selection: $settings.windStyle) {
+                    ForEach(WindStyle.allCases) { style in
+                        Text(style.title).tag(style)
+                    }
+                }
+                .pickerStyle(.segmented)
             }
 
             Section("Timing") {

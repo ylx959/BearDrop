@@ -14,12 +14,21 @@ let package = Package(
         .executableTarget(
             name: "ParaBear",
             path: "Sources/ParaBear",
+            exclude: [
+                "Assets/README.md"
+            ],
             resources: [
+                .process("Assets"),
                 .process("Resources")
             ],
             swiftSettings: [
                 .enableUpcomingFeature("ExistentialAny")
             ]
+        ),
+        .testTarget(
+            name: "ParaBearTests",
+            dependencies: ["ParaBear"],
+            path: "Tests/ParaBearTests"
         )
     ]
 )

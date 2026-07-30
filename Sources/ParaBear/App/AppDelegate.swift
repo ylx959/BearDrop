@@ -24,16 +24,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.calendarService = calendarService
         self.timelineViewModel = timelineViewModel
 
+        let driftState = BearDriftState()
         overlayWindowController = BearOverlayWindowController(
-            rootView: BearOverlayView(viewModel: timelineViewModel, settings: settings)
+            rootView: BearOverlayView(
+                viewModel: timelineViewModel,
+                settings: settings,
+                driftState: driftState
+            ),
+            driftState: driftState
         )
 
         menuBarController = MenuBarController(
             settings: settings,
             calendarService: calendarService,
-            onShowBear: { [weak self] in
+            onCallBear: { [weak self] in
                 guard let self else { return }
-                self.overlayWindowController?.showPreviewFlight(duration: self.settings.plannedFlightSpeed.flightDuration)
+                self.overlayWindowController?.playReminderFlight(duration: self.settings.plannedFlightSpeed.flightDuration)
             },
             onHideBear: { [weak self] in self?.overlayWindowController?.hide() },
             onOpenSettings: {

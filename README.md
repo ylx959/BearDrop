@@ -1,15 +1,15 @@
-# ParaBear
+# BearDrop.
 
-ParaBear is a small macOS desktop companion: a calm bear floating under a parachute that shows the next upcoming Calendar event.
+ParaBear is a native macOS desktop companion designed to keep your schedule out of your mind and in your workspace. A parachuting teddy bear appears only when it’s time to remind you of an upcoming event, then quietly drifts away with natural, physics-inspired motion. Stay focused on the present—ParaBear takes care of what’s next.
 
-Instead of staying on-screen all day, ParaBear appears for scheduled reminder flights: 10 minutes before a meeting, 5 minutes before, 3 minutes before, and right when the event starts. Each flight enters from the top of the screen, sways left and right while descending, then disappears at the bottom.
-
-During a flight, the user can drag the bear/parachute panel to any position. After release, ParaBear continues the same descent from the release point. The side-to-side wind motion uses a lightweight driven, damped oscillator model: each frame applies wind force, spring-back force, and damping to create a more physical sway than a fixed sine wave.
-
+## Function
 The menu bar control follows the compact utility pattern:
 
+![menu_bar function](/Users/yanglinxuan/Documents/BearDrop/Sources/ParaBear/Assets/menu_bar.jpg)
+
 - Calendar connection status
-- Planned speed: Slow / Normal / Fast
+- Dropped speed: Slow / Normal / Fast
+- Appearence: Bright/Dark mode
 - Test ParaBear
 - Quit ParaBear
 

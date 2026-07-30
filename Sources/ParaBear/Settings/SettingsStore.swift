@@ -18,8 +18,18 @@ final class SettingsStore: ObservableObject {
         didSet { UserDefaults.standard.set(animationIntensity, forKey: Keys.animationIntensity) }
     }
 
+    @Published var windStyle: WindStyle {
+        didSet { UserDefaults.standard.set(windStyle.rawValue, forKey: Keys.windStyle) }
+    }
+
     @Published var plannedFlightSpeed: PlannedFlightSpeed {
         didSet { UserDefaults.standard.set(plannedFlightSpeed.rawValue, forKey: Keys.plannedFlightSpeed) }
+    }
+
+    /// The rig's own colour scheme, which has nothing to do with the system appearance — see
+    /// `RigAppearance`.
+    @Published var appearance: RigAppearance {
+        didSet { UserDefaults.standard.set(appearance.rawValue, forKey: Keys.appearance) }
     }
 
     init() {
@@ -27,8 +37,12 @@ final class SettingsStore: ObservableObject {
         alertThresholdMinutes = UserDefaults.standard.object(forKey: Keys.alertThresholdMinutes) as? Double ?? 15
         urgentThresholdMinutes = UserDefaults.standard.object(forKey: Keys.urgentThresholdMinutes) as? Double ?? 5
         animationIntensity = UserDefaults.standard.object(forKey: Keys.animationIntensity) as? Double ?? 1
+        let windStyleValue = UserDefaults.standard.string(forKey: Keys.windStyle) ?? WindStyle.windy.rawValue
+        windStyle = WindStyle(rawValue: windStyleValue) ?? .windy
         let speedValue = UserDefaults.standard.string(forKey: Keys.plannedFlightSpeed) ?? PlannedFlightSpeed.fast.rawValue
         plannedFlightSpeed = PlannedFlightSpeed(rawValue: speedValue) ?? .fast
+        let appearanceValue = UserDefaults.standard.string(forKey: Keys.appearance) ?? RigAppearance.dark.rawValue
+        appearance = RigAppearance(rawValue: appearanceValue) ?? .dark
     }
 
     private enum Keys {
@@ -36,6 +50,8 @@ final class SettingsStore: ObservableObject {
         static let alertThresholdMinutes = "alertThresholdMinutes"
         static let urgentThresholdMinutes = "urgentThresholdMinutes"
         static let animationIntensity = "animationIntensity"
+        static let windStyle = "windStyle"
         static let plannedFlightSpeed = "plannedFlightSpeed"
+        static let appearance = "appearance"
     }
 }

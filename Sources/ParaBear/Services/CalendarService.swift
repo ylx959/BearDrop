@@ -10,8 +10,10 @@ final class CalendarService: ObservableObject {
     }
 
     @Published private(set) var authorizationState: AuthorizationState = .unknown
+    /// Every event in the window, in order. Which one the bear is on is not decided here — see
+    /// `EventTimelineViewModel.selectNextEvent`, which has the state that decision needs and runs
+    /// far more often than this is polled.
     @Published private(set) var todayEvents: [CalendarEvent] = []
-    @Published private(set) var nextEvent: CalendarEvent?
 
     private let eventStore = EKEventStore()
     private let calendar = Calendar.autoupdatingCurrent
@@ -19,13 +21,10 @@ final class CalendarService: ObservableObject {
     func refresh() async {
         guard await ensureAuthorization() else {
             todayEvents = []
-            nextEvent = nil
             return
         }
 
-        let events = fetchUpcomingEvents()
-        todayEvents = events
-        nextEvent = events.first(where: { $0.endDate > Date() })
+        todayEvents = fetchUpcomingEvents()
     }
 
     private func ensureAuthorization() async -> Bool {

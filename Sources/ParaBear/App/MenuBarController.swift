@@ -6,7 +6,7 @@ final class MenuBarController {
     private let statusItem: NSStatusItem
     private let settings: SettingsStore
     private let calendarService: CalendarService
-    private let onShowBear: () -> Void
+    private let onCallBear: () -> Void
     private let onOpenSettings: () -> Void
     private var cancellables: Set<AnyCancellable> = []
     private let statusDot = NSView(frame: NSRect(x: 0, y: 0, width: 8, height: 8))
@@ -17,34 +17,39 @@ final class MenuBarController {
         target: nil,
         action: nil
     )
+    private let appearanceToggle: AppearanceToggleView
 
     init(
         settings: SettingsStore,
         calendarService: CalendarService,
-        onShowBear: @escaping () -> Void,
+        onCallBear: @escaping () -> Void,
         onHideBear: @escaping () -> Void,
         onOpenSettings: @escaping () -> Void
     ) {
         self.settings = settings
         self.calendarService = calendarService
-        self.onShowBear = onShowBear
+        self.onCallBear = onCallBear
         self.onOpenSettings = onOpenSettings
+        appearanceToggle = AppearanceToggleView(scheme: settings.appearance)
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "calendar.badge.clock", accessibilityDescription: "ParaBear")
+            button.image = MenuBarIcon.pawCalendar()
             button.imagePosition = .imageOnly
         }
 
         let menu = NSMenu()
         menu.addItem(customItem(view: statusRow()))
         menu.addItem(customItem(view: speedRow()))
+        menu.addItem(customItem(view: appearanceRow()))
         menu.addItem(NSMenuItem.separator())
 
-        let testItem = NSMenuItem(title: "Test ParaBear", action: #selector(showBear), keyEquivalent: "")
-        testItem.image = NSImage(systemSymbolName: "airplane", accessibilityDescription: "Test ParaBear")
-        testItem.target = self
-        menu.addItem(testItem)
+        // "Call", not "Test": this flies the bear with whatever is actually in the next hour on
+        // it, so it is a way to ask the bear what is coming — not a rehearsal of one.
+        let callItem = NSMenuItem(title: "Call ParaBear", action: #selector(callBear), keyEquivalent: "")
+        callItem.image = NSImage(systemSymbolName: "pawprint.fill", accessibilityDescription: "Call ParaBear")
+        callItem.target = self
+        menu.addItem(callItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -55,6 +60,14 @@ final class MenuBarController {
 
         statusItem.menu = menu
         bindCalendarStatus()
+
+        // The toggle is built once but the setting it shows is not only ours to change, so it
+        // follows the store rather than assuming it is the only thing writing to it.
+        settings.$appearance
+            .sink { [weak self] appearance in
+                self?.appearanceToggle.setScheme(appearance)
+            }
+            .store(in: &cancellables)
     }
 
     private func statusRow() -> NSView {
@@ -101,6 +114,27 @@ final class MenuBarController {
         return row
     }
 
+    private func appearanceRow() -> NSView {
+        let title = NSTextField(labelWithString: "Appearance")
+        title.font = .systemFont(ofSize: 11, weight: .medium)
+        title.textColor = .secondaryLabelColor
+
+        appearanceToggle.onChange = { [weak self] appearance in
+            self?.settings.appearance = appearance
+        }
+
+        let row = NSStackView(views: [title, appearanceToggle])
+        row.orientation = .horizontal
+        row.alignment = .centerY
+        row.distribution = .fill
+        row.spacing = 12
+        row.edgeInsets = NSEdgeInsets(top: 4, left: 12, bottom: 8, right: 12)
+        row.frame = NSRect(x: 0, y: 0, width: 210, height: 38)
+        title.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        appearanceToggle.setContentHuggingPriority(.required, for: .horizontal)
+        return row
+    }
+
     private func customItem(view: NSView) -> NSMenuItem {
         let item = NSMenuItem()
         item.view = view
@@ -130,8 +164,8 @@ final class MenuBarController {
         }
     }
 
-    @objc private func showBear() {
-        onShowBear()
+    @objc private func callBear() {
+        onCallBear()
     }
 
     @objc private func speedChanged() {

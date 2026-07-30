@@ -5,43 +5,60 @@ struct ParachuteEventCard: View {
     let countdownText: String
     let authorizationState: CalendarService.AuthorizationState
     let mood: BearMood
+    var appearance: RigAppearance = .dark
+    var onTap: () -> Void = {}
+
+    /// The canopy is drawn at the crop's own proportions, so the hem lands exactly on the bottom
+    /// edge of the card and the suspension lines start where the fabric ends.
+    static let width: CGFloat = 244
+    static var height: CGFloat { ParachuteCanopy.height(forWidth: width) }
+
+    /// The text's colours come from the rig's own scheme, not from `.primary`/`.secondary`. The
+    /// canopy is lit fabric and is never tinted by the system, so system colours would flip
+    /// underneath it the moment macOS changed appearance and leave black on near-black.
+    private var palette: CanopyPalette { CanopyPalette.of(appearance) }
 
     var body: some View {
-        VStack(spacing: 7) {
-            Text(title)
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .foregroundStyle(.primary)
+        ZStack {
+            ParachuteCanopyView(appearance: appearance)
+                .shadow(color: .black.opacity(0.18), radius: 16, x: 0, y: 10)
 
-            Text(subtitle)
-                .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundStyle(.secondary)
+            VStack(spacing: 7) {
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .foregroundStyle(palette.title)
 
-            Text(countdownText)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundStyle(accentColor)
+                Text(subtitle)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .foregroundStyle(palette.subtitle)
+
+                Text(countdownText)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .foregroundStyle(accentColor)
+            }
+            .padding(.horizontal, 26)
+            .frame(width: 218)
+            .offset(y: -9)
+            // The fabric is sheer enough that what is behind the window reaches the type. The
+            // shadow is what keeps it legible over an unknown desktop without having to thicken
+            // the canopy back up — and it is a *glow* on the light scheme, since there the thing
+            // black type has to survive is a bright desktop coming through.
+            .shadow(color: palette.textShadow, radius: palette.textShadowRadius, x: 0, y: 1)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 13)
-        .frame(width: 212)
-        .frame(minHeight: 92)
-        .background(.ultraThinMaterial, in: parachuteShape)
-        .overlay {
-            parachuteShape
-                .strokeBorder(.white.opacity(0.38), lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.13), radius: 18, x: 0, y: 10)
-    }
-
-    private var parachuteShape: UnevenRoundedRectangle {
-        UnevenRoundedRectangle(
-            topLeadingRadius: 52,
-            bottomLeadingRadius: 18,
-            bottomTrailingRadius: 18,
-            topTrailingRadius: 52,
-            style: .continuous
-        )
+        .frame(width: Self.width, height: Self.height)
+        .compositingGroup()
+        // The canopy's own outline, not its bounding box: the corners either side of the dome are
+        // desktop showing through, and a tap there belongs to whatever is behind the window.
+        .contentShape(ParachuteCanopy())
+        .onTapGesture(perform: onTap)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Opens Google Calendar")
     }
 
     private var title: String {
@@ -61,11 +78,14 @@ struct ParachuteEventCard: View {
         return EventTimelineViewModel.timeString(for: event.startDate)
     }
 
+    /// The alert and urgent tones differ sharply between the schemes: the deep orange and red that
+    /// read as a warning on white fabric go muddy on near-black, and the lifted pair that work
+    /// there wash out to pastel on white.
     private var accentColor: Color {
         switch mood {
-        case .calm: .secondary
-        case .alert: Color(red: 0.76, green: 0.44, blue: 0.28)
-        case .urgent: Color(red: 0.72, green: 0.22, blue: 0.18)
+        case .calm: palette.subtitle
+        case .alert: palette.alert
+        case .urgent: palette.urgent
         }
     }
 }

@@ -17,6 +17,9 @@ final class EventTimelineViewModel: ObservableObject {
     private var countdownTask: Task<Void, Never>?
     private var calendarPollingTask: Task<Void, Never>?
     private var firedReminderKeys: Set<String> = []
+    /// Events the bear is done with — see `ReminderMilestone.underway`. They stay in `todayEvents`,
+    /// they are simply never chosen again.
+    private var finishedEventKeys: Set<String> = []
 
     init(calendarService: CalendarService, settings: SettingsStore) {
         self.calendarService = calendarService
@@ -24,14 +27,18 @@ final class EventTimelineViewModel: ObservableObject {
 
         calendarService.$authorizationState
             .assign(to: &$authorizationState)
-        calendarService.$nextEvent
-            .sink { [weak self] event in
-                self?.nextEvent = event
+        // Which event the bear is on is decided here rather than by the service, because the rule
+        // has state the service does not have: an event is dropped once the bear has finished with
+        // it, and that happens on the five-second tick — twelve times more often than the calendar
+        // is polled. Deciding it in the service would leave the poll racing the tick for the last
+        // milestone, and the poll would sometimes win by retiring the event before it fired.
+        calendarService.$todayEvents
+            .sink { [weak self] events in
+                self?.todayEvents = events
+                self?.selectNextEvent()
                 self?.recalculateCountdown()
             }
             .store(in: &cancellables)
-        calendarService.$todayEvents
-            .assign(to: &$todayEvents)
     }
 
     deinit {
@@ -60,8 +67,27 @@ final class EventTimelineViewModel: ObservableObject {
     }
 
     private func tick() async {
+        selectNextEvent()
         recalculateCountdown()
         fireReminderIfNeeded()
+    }
+
+    /// The first event still worth showing: not already over, and not one the bear has finished
+    /// with. Re-checked every tick rather than only when the calendar is polled, because both of
+    /// those go stale between polls.
+    private func selectNextEvent() {
+        nextEvent = Self.nextEvent(from: todayEvents, finished: finishedEventKeys, now: Date())
+    }
+
+    /// Stated as a function of its inputs so the rule can be checked directly — the interesting
+    /// case, an in-progress event standing in front of the ones behind it, takes half an hour to
+    /// reach in real time.
+    static func nextEvent(
+        from events: [CalendarEvent],
+        finished: Set<String>,
+        now: Date
+    ) -> CalendarEvent? {
+        events.first { $0.endDate > now && !finished.contains(eventKey(for: $0)) }
     }
 
     private func recalculateCountdown() {
@@ -113,11 +139,43 @@ final class EventTimelineViewModel: ObservableObject {
         for handledMilestone in ReminderMilestone.milestonesHandled(by: milestone) {
             firedReminderKeys.insert(reminderKey(for: nextEvent, milestone: handledMilestone))
         }
+
+        // The last milestone retires the event, and it does so *before* the flight goes out rather
+        // than after. Dropping it here is what lets whatever is behind it start its own countdown —
+        // an event left in place until its end time blocks the ones after it, and back-to-back
+        // meetings then get no warning at all. Doing it first also settles what the flight will
+        // say: the card reads this view model live, so a flight launched before the handover shows
+        // the retired event for a frame and then switches under itself.
+        if milestone.isLast {
+            finishedEventKeys.insert(Self.eventKey(for: nextEvent))
+            selectNextEvent()
+            recalculateCountdown()
+        }
+
+        guard Self.isWorthFlying(milestone, handingOverTo: self.nextEvent) else { return }
+
         reminderFlights.send(milestone)
     }
 
+    /// The last milestone's flight is a handover — *that one is done, here is the next*. With
+    /// nothing behind it there is nothing to hand over to, and the bear would be parachuting in
+    /// only to report that there is nothing to report. The other milestones always have their own
+    /// event to announce.
+    static func isWorthFlying(
+        _ milestone: ReminderMilestone,
+        handingOverTo next: CalendarEvent?
+    ) -> Bool {
+        !milestone.isLast || next != nil
+    }
+
+    /// Identifies an occurrence, not a series: a repeating event carries the same id for every one
+    /// of its starts, and finishing with this morning's stand-up must not silence tomorrow's.
+    static func eventKey(for event: CalendarEvent) -> String {
+        "\(event.id)-\(Int(event.startDate.timeIntervalSince1970))"
+    }
+
     private func reminderKey(for event: CalendarEvent, milestone: ReminderMilestone) -> String {
-        "\(event.id)-\(Int(event.startDate.timeIntervalSince1970))-\(milestone)"
+        "\(Self.eventKey(for: event))-\(milestone)"
     }
 
     static func timeString(for date: Date) -> String {
