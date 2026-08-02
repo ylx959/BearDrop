@@ -76,6 +76,3 @@ The bear's palette is the `<style>` block at the top of each of those files, and
 
 `SettingsStore` is the single source of truth for user prefs (bear visibility, alert/urgent thresholds in minutes, animation intensity, `WindStyle`, `PlannedFlightSpeed`), backed directly by `UserDefaults` with `didSet` persistence — no separate persistence layer.
 
-## Conventions
-
-- When making new page components, always add a link to that page in the header.
