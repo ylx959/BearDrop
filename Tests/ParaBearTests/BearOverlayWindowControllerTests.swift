@@ -23,9 +23,9 @@ struct BearOverlayWindowControllerTests {
 
         // The window is allowed to overhang the screen edge — only the drawn content has to
         // stay visible, which is what buys the extra travel.
-        let sideInset = (windowWidth - BearOverlayWindowController.contentWidth) / 2
+        let sideInset = (windowWidth - RigLayout.cardWidth) / 2
         let contentMinX = bounds.lowerBound + sideInset
-        let contentMaxX = bounds.upperBound + sideInset + BearOverlayWindowController.contentWidth
+        let contentMaxX = bounds.upperBound + sideInset + RigLayout.cardWidth
         #expect(contentMinX >= visibleFrame.minX)
         #expect(contentMaxX <= visibleFrame.maxX)
 

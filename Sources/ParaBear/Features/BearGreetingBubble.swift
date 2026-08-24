@@ -2,25 +2,30 @@ import AppKit
 import SwiftUI
 
 struct BearGreetingBubble: View {
-    /// Sized so the capsule is a comfortable height for 13pt type once the artwork's proportion is
-    /// honoured — the shape is very wide (the body is 4.18:1), so the width decides the height and
-    /// not the other way round.
+    /// Wide enough for the remarks, and no wider than the gap allows.
+    ///
+    /// Both ends of that are real. The longest line — "I'm watching you procrastinate." — measures
+    /// 194pt at 13pt, which no single-line bubble here can hold: the bubble has to clear the bear
+    /// and stay on the window, which caps it around 189. So it wraps to two lines instead of being
+    /// shrunk to fit, and the artwork turns out to have room — the capsule's own proportion gives a
+    /// 42pt body at this width, which is two lines of 13pt with air to spare. Shrinking was the
+    /// alternative and it lands the longest remarks at about 10pt, noticeably smaller than the
+    /// short ones sitting in the same bubble a tap earlier.
     static let width: CGFloat = 176
 
     static var height: CGFloat { SpeechBubble.height(forWidth: width) }
     static var bodyHeight: CGFloat { SpeechBubble.bodyHeight(forWidth: width) }
-    /// Where the tail points. `BearOverlayView` places the bubble by this, not by its corner.
-    static var tailTip: CGPoint { SpeechBubble.tailTip(forWidth: width) }
 
-    let userName: String
+    let remark: String
 
     var body: some View {
-        Text("Hello \"\(userName)\"")
+        Text(remark)
             .font(.system(size: 13, weight: .semibold, design: .rounded))
             .foregroundStyle(.primary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.78)
-            .padding(.horizontal, 18)
+            .multilineTextAlignment(.center)
+            .lineLimit(2)
+            .minimumScaleFactor(0.85)
+            .padding(.horizontal, 14)
             // Centred in the **capsule**, not in the canvas: the canvas includes the tail, and
             // centring on that would push the text down off the middle of the bubble by half the
             // tail's height.
@@ -34,20 +39,6 @@ struct BearGreetingBubble: View {
                     }
                     .shadow(color: .black.opacity(0.10), radius: 8, x: 0, y: 5)
             }
-            .accessibilityLabel("Hello \(userName)")
-    }
-}
-
-enum CurrentUserGreeting {
-    static var displayName: String {
-        let fullName = NSFullUserName()
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        if !fullName.isEmpty {
-            return fullName
-        }
-
-        let shortName = NSUserName()
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return shortName.isEmpty ? "friend" : shortName
+            .accessibilityLabel(remark)
     }
 }

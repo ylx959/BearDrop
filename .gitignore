@@ -3,3 +3,4 @@
 .swiftpm/
 DerivedData/
 *.xcuserdata/
+.claude

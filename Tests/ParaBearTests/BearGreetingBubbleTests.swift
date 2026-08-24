@@ -1,24 +1,64 @@
+import AppKit
 import SwiftUI
 import Testing
 @testable import ParaBear
 
 struct BearGreetingBubbleTests {
+    /// Every remark has to fit the bubble it is drawn in — at most two lines, without being shrunk
+    /// past the point where it stops matching the short ones. This is the constraint that fixes the
+    /// bubble's width, so it is measured rather than eyeballed.
     @MainActor
-    @Test func currentUserGreetingHasDisplayName() {
-        #expect(!CurrentUserGreeting.displayName.isEmpty)
+    @Test func everyRemarkFitsInTwoLines() {
+        let font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+        let rounded = NSFont(
+            descriptor: font.fontDescriptor.withDesign(.rounded) ?? font.fontDescriptor,
+            size: 13
+        ) ?? font
+        // What the text is actually given, once the capsule's horizontal padding is taken out.
+        let available = (BearGreetingBubble.width - 28) * 2
+
+        for remark in BearRemark.all {
+            let width = (remark as NSString).size(withAttributes: [.font: rounded]).width
+
+            #expect(width <= available, "\"\(remark)\" needs \(Int(width))pt of two lines")
+        }
     }
 
     @MainActor
     @Test func theTailHangsBelowTheCapsule() {
         #expect(BearGreetingBubble.bodyHeight < BearGreetingBubble.height)
-        #expect(BearGreetingBubble.tailTip.y == BearGreetingBubble.height)
+        #expect(SpeechBubble.tailTip(forWidth: BearGreetingBubble.width).y == BearGreetingBubble.height)
     }
 
     /// The tail points down and to the **right of its own base**, which is what puts the bubble
     /// above-left of the bear rather than beside it.
     @MainActor
     @Test func theTailPointsRightOfCentre() {
-        #expect(BearGreetingBubble.tailTip.x > BearGreetingBubble.width / 2)
+        #expect(SpeechBubble.tailTip(forWidth: BearGreetingBubble.width).x > BearGreetingBubble.width / 2)
+    }
+
+    /// The greeting is a label about the bear, so it must not be drawn over any part of it.
+    @MainActor
+    @Test func theGreetingCoversNoPartOfTheBear() {
+        #expect(!RigLayout.greetingRect.intersects(RigLayout.bearRect))
+    }
+
+    /// And it is genuinely beside the bear rather than parked somewhere harmlessly far away — the
+    /// tail has to be pointing at something.
+    @MainActor
+    @Test func theGreetingStillSitsNextToTheBear() {
+        let gap = RigLayout.bearRect.minX - RigLayout.greetingRect.maxX
+
+        #expect(gap > 0)
+        #expect(gap < 24)
+        // Level with the bear, not floating above the canopy.
+        #expect(RigLayout.greetingRect.maxY > RigLayout.bearRect.minY)
+    }
+
+    /// It also has to fit in the window, which is the other half of what fixes the width.
+    @MainActor
+    @Test func theGreetingFitsInsideTheWindow() {
+        #expect(RigLayout.greetingRect.minX > 0)
     }
 }
 
@@ -73,5 +113,36 @@ struct SpeechBubbleTests {
     @MainActor
     @Test func theCapsuleHasRoomForTheType() {
         #expect(BearGreetingBubble.bodyHeight > 30)
+    }
+}
+
+struct BearRemarkTests {
+    @Test func thereAreRemarksAndNoneAreEmpty() {
+        #expect(BearRemark.all.count == 17)
+        #expect(BearRemark.all.allSatisfy { !$0.isEmpty })
+    }
+
+    /// Duplicates would make `next(after:)` able to repeat itself despite excluding the last line.
+    @Test func theRemarksAreAllDifferent() {
+        #expect(Set(BearRemark.all).count == BearRemark.all.count)
+    }
+
+    /// The whole point of `next(after:)`: a tap always changes the words, because that is the only
+    /// feedback the tap gives.
+    @Test func theNextRemarkIsNeverTheOneAlreadyShowing() {
+        var showing = BearRemark.all[0]
+
+        for _ in 0..<500 {
+            let next = BearRemark.next(after: showing)
+
+            #expect(next != showing)
+            #expect(BearRemark.all.contains(next))
+            showing = next
+        }
+    }
+
+    /// And with nothing showing yet it still answers.
+    @Test func theFirstRemarkNeedsNoPredecessor() {
+        #expect(BearRemark.all.contains(BearRemark.next(after: nil)))
     }
 }

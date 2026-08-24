@@ -34,15 +34,18 @@ A native macOS menu-bar companion that keeps your schedule out of your head and 
 
 ## Install
 
-Requires macOS 15 (Sequoia) or later and Xcode Command Line Tools (`xcode-select --install`).
+Requires macOS 15 (Sequoia) or later, and a toolchain with **Swift 6.2** — Xcode 26 / Command Line Tools 26 or newer. An older toolchain stops at the first line of `Package.swift` with a version error rather than anything that explains itself. Check with `swift --version`; install the tools with `xcode-select --install`.
 
 ```bash
 git clone https://github.com/ylx959/BearDrop.git
 cd BearDrop
 Scripts/package_app.sh
+rm -rf /Applications/ParaBear.app          # replacing, not merging — see below
 cp -R .build/ParaBear.app /Applications/
 open /Applications/ParaBear.app
 ```
+
+The `rm -rf` matters when you already have a copy installed: `cp -R` into an existing `.app` **merges** into it rather than replacing it, so files the new build no longer ships stay behind, and the signature then fails to verify (`a sealed resource is missing or invalid`).
 
 There is no Dock icon and no window — look for the paw-print calendar in the menu bar. macOS asks for Calendar access on first launch; choose **Allow Full Access**, then **Call ParaBear** to check it works.
 

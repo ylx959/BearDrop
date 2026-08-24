@@ -15,7 +15,10 @@ let package = Package(
             name: "ParaBear",
             path: "Sources/ParaBear",
             exclude: [
-                "Assets/README.md"
+                "Assets/README.md",
+                // Source art for the app icon, not something the app draws. It reaches the bundle
+                // as Contents/Resources/AppIcon.icns, built from it by Scripts/package_app.sh.
+                "Assets/AppIcon.png"
             ],
             resources: [
                 .process("Assets"),

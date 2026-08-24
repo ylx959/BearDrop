@@ -16,7 +16,7 @@ struct OverlayHitTestingTests {
         for x in [2.0, 20.0, 60.0, 440.0, 480.0, 498.0] {
             for y in [30.0, 120.0, 240.0, 380.0] {
                 #expect(
-                    !RigLayout.contains(CGPoint(x: x, y: y)),
+                    !RigLayout.contains(CGPoint(x: x, y: y), pose: .resting),
                     "click swallowed at (\(x), \(y))"
                 )
             }
@@ -24,8 +24,8 @@ struct OverlayHitTestingTests {
     }
 
     @Test func theEmptySpaceAboveAndBelowTheRigLetsClicksThrough() {
-        #expect(!RigLayout.contains(CGPoint(x: 250, y: 2)))
-        #expect(!RigLayout.contains(CGPoint(x: 250, y: 455)))
+        #expect(!RigLayout.contains(CGPoint(x: 250, y: 2), pose: .resting))
+        #expect(!RigLayout.contains(CGPoint(x: 250, y: 455), pose: .resting))
     }
 
     /// The corners either side of the dome are sky, which is why the canopy contributes its outline
@@ -33,8 +33,8 @@ struct OverlayHitTestingTests {
     @Test func theSkyEitherSideOfTheDomeLetsClicksThrough() {
         let canopy = RigLayout.canopyRect
 
-        #expect(!RigLayout.contains(CGPoint(x: canopy.minX + 2, y: canopy.minY + 2)))
-        #expect(!RigLayout.contains(CGPoint(x: canopy.maxX - 2, y: canopy.minY + 2)))
+        #expect(!RigLayout.contains(CGPoint(x: canopy.minX + 2, y: canopy.minY + 2), pose: .resting))
+        #expect(!RigLayout.contains(CGPoint(x: canopy.maxX - 2, y: canopy.minY + 2), pose: .resting))
     }
 
     /// And the same either side of the bear, which is the narrowest thing on the rig. A box that
@@ -43,22 +43,22 @@ struct OverlayHitTestingTests {
     @Test func theAirEitherSideOfTheBearLetsClicksThrough() {
         let bear = RigLayout.bearRect
 
-        #expect(!RigLayout.contains(CGPoint(x: bear.minX - 30, y: bear.midY)))
-        #expect(!RigLayout.contains(CGPoint(x: bear.maxX + 30, y: bear.midY)))
+        #expect(!RigLayout.contains(CGPoint(x: bear.minX - 30, y: bear.midY), pose: .resting))
+        #expect(!RigLayout.contains(CGPoint(x: bear.maxX + 30, y: bear.midY), pose: .resting))
     }
 
     /// The lines gather to a knot, so the triangles either side of the fan are air too.
     @Test func theAirEitherSideOfTheRiggingLinesLetsClicksThrough() {
         let lines = RigLayout.linesRect
 
-        #expect(!RigLayout.contains(CGPoint(x: lines.minX + 6, y: lines.maxY - 6)))
-        #expect(!RigLayout.contains(CGPoint(x: lines.maxX - 6, y: lines.maxY - 6)))
+        #expect(!RigLayout.contains(CGPoint(x: lines.minX + 6, y: lines.maxY - 6), pose: .resting))
+        #expect(!RigLayout.contains(CGPoint(x: lines.maxX - 6, y: lines.maxY - 6), pose: .resting))
     }
 
     /// And the rig is still grabbable, or the drag and the taps would be gone with it.
     @Test func theRigItselfStillTakesClicks() {
-        #expect(RigLayout.contains(CGPoint(x: 250, y: RigLayout.canopyRect.midY)))
-        #expect(RigLayout.contains(CGPoint(x: 250, y: RigLayout.bearRect.midY)))
+        #expect(RigLayout.contains(CGPoint(x: 250, y: RigLayout.canopyRect.midY), pose: .resting))
+        #expect(RigLayout.contains(CGPoint(x: 250, y: RigLayout.bearRect.midY), pose: .resting))
     }
 
     /// A leaning bear is grabbed where it is leaning, not where it hangs at rest. This is the whole
@@ -94,41 +94,18 @@ struct OverlayHitTestingTests {
             driftState: BearDriftState()
         )
 
-        let renderer = ImageRenderer(content: view)
-        renderer.scale = 1
-
-        let image = try #require(renderer.cgImage)
-        let width = image.width
-        let height = image.height
-        var pixels = [UInt8](repeating: 0, count: width * height * 4)
-
-        let context = try #require(
-            CGContext(
-                data: &pixels,
-                width: width,
-                height: height,
-                bitsPerComponent: 8,
-                bytesPerRow: width * 4,
-                space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            )
-        )
-        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        let drawn = try SolidPixels(of: view)
 
         var uncovered = 0
         var firstMiss: CGPoint?
 
-        for row in 0..<height {
-            for column in 0..<width {
-                // The rig paints a soft drop shadow that spreads well past the fabric. A shadow is
-                // not a thing anyone aims at, so only what is solidly drawn has to be covered.
-                guard pixels[(row * width + column) * 4 + 3] > 160 else { continue }
+        drawn.forEachPixel { column, row in
+            guard drawn.isSolid(column: column, row: row) else { return }
 
-                let point = CGPoint(x: Double(column) + 0.5, y: Double(row) + 0.5)
-                if !RigLayout.contains(point) {
-                    uncovered += 1
-                    if firstMiss == nil { firstMiss = point }
-                }
+            let point = drawn.centre(column: column, row: row)
+            if !RigLayout.contains(point, pose: .resting) {
+                uncovered += 1
+                if firstMiss == nil { firstMiss = point }
             }
         }
 
@@ -140,7 +117,7 @@ struct OverlayHitTestingTests {
 
     /// And it is genuinely a small part of the window, or none of the above proves anything.
     @Test func theRegionIsAFractionOfTheWindow() {
-        let bounds = RigLayout.bounds()
+        let bounds = RigLayout.bounds
         let window = RigLayout.windowSize
 
         #expect(bounds.width < window.width * 0.62)
@@ -155,7 +132,7 @@ struct OverlayHitTestingTests {
 @MainActor
 struct ClickThroughTests {
     /// A window somewhere off-origin, so an error in the conversion cannot cancel itself out.
-    private let frame = NSRect(x: 300, y: 200, width: 500, height: 460)
+    private let frame = NSRect(origin: CGPoint(x: 300, y: 200), size: RigLayout.windowSize)
 
     /// Screen coordinates run up from the bottom; the layout is stated down from the top.
     private func screenPoint(rigX: CGFloat, rigY: CGFloat) -> CGPoint {
@@ -167,7 +144,8 @@ struct ClickThroughTests {
             #expect(
                 !BearOverlayWindowController.passesThrough(
                     pointer: screenPoint(rigX: 250, rigY: rigY),
-                    windowFrame: frame
+                    windowFrame: frame,
+                    pose: .resting
                 )
             )
         }
@@ -181,7 +159,7 @@ struct ClickThroughTests {
 
         for point in air {
             #expect(
-                BearOverlayWindowController.passesThrough(pointer: point, windowFrame: frame)
+                BearOverlayWindowController.passesThrough(pointer: point, windowFrame: frame, pose: .resting)
             )
         }
     }
@@ -193,8 +171,8 @@ struct ClickThroughTests {
         let mirrored = screenPoint(rigX: 250, rigY: RigLayout.windowSize.height - 40)
 
         #expect(
-            BearOverlayWindowController.passesThrough(pointer: nearTheCanopy, windowFrame: frame)
-                != BearOverlayWindowController.passesThrough(pointer: mirrored, windowFrame: frame)
+            BearOverlayWindowController.passesThrough(pointer: nearTheCanopy, windowFrame: frame, pose: .resting)
+                != BearOverlayWindowController.passesThrough(pointer: mirrored, windowFrame: frame, pose: .resting)
         )
     }
 }

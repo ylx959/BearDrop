@@ -78,35 +78,6 @@ struct DescentSwayTests {
         }
     }
 
-    /// Every stroke, on every flight: leaning the other way while travelling, thrown onward at the
-    /// end. This is the pair of rules, checked on the descent rather than on the in-place drift.
-    @Test func bothRulesHoldOnEveryStrokeOfEveryFlight() {
-        for _ in 0..<50 {
-            let sway = Self.sway()
-            let quarter = (.pi / 2) / sway.strokeRate
-
-            for stroke in 0..<4 {
-                let midStroke = Double(stroke) * 2 * quarter - sway.strokePhase / sway.strokeRate
-                guard midStroke > 0 else { continue }
-
-                let strokeEnd = midStroke + quarter
-                let lean = { (time: Double) in
-                    BearSwing.degrees(
-                        velocity: sway.velocity(at: time),
-                        acceleration: sway.acceleration(at: time),
-                        nominalSpeed: sway.nominalSpeed(at: time),
-                        nominalTurn: sway.nominalTurn(at: time)
-                    )
-                }
-
-                // Rule 1, mid-stroke: leaning against the way it is going.
-                #expect(lean(midStroke).sign == sway.velocity(at: midStroke).sign)
-                // Rule 2, at the end: thrown onward, to the side away from where it has arrived.
-                #expect(lean(strokeEnd).sign != sway.offset(at: strokeEnd).sign)
-            }
-        }
-    }
-
     /// A drop right against the edge of the corridor gets a sweep sized to the room left there,
     /// not to the whole corridor — otherwise it sweeps the card straight off the screen.
     @Test func aFlightResumedAtTheEdgeGetsASweepThatFitsThere() {

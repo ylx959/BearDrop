@@ -1,70 +1,94 @@
 import SwiftUI
 
 struct BearCharacterView: View {
+    /// The bear's own box, stated once: its `visibleRect`, the aspect it holds itself to, and the
+    /// box `RigLayout` gives it all come from here. Three separate statements of the same
+    /// proportion had already drifted apart by most of a point.
+    ///
+    /// The artwork used to be one bear inside a much larger shared coordinate space, cropped to
+    /// with a `visibleRect`; it is now exported as just the bear, so the crop is the whole file and
+    /// `sourceRect` and the viewBox are the same rectangle.
+    static let sourceRect = CGRect(x: 0, y: 0, width: 184, height: 353)
+
+    static func height(forWidth width: CGFloat) -> CGFloat {
+        width * sourceRect.height / sourceRect.width
+    }
+
     let mood: BearMood
     var appearance: RigAppearance = .dark
-    var onBellyTap: () -> Void = {}
-    @State private var bellyBounceAmount = 0.0
+    var onTap: () -> Void = {}
+    @State private var bounceAmount = 0.0
 
     var body: some View {
         GeometryReader { proxy in
-            let bellyRegion = BearBellyInteraction.region(in: proxy.size)
+            let region = BearTapTarget.region(in: proxy.size)
 
             ZStack(alignment: .topLeading) {
                 SVGAssetView(
                     resourceName: "bear",
                     subdirectory: "Bear",
-                    visibleRect: CGRect(x: 404, y: 642, width: 204, height: 371),
+                    sourceViewBox: Self.sourceRect.size,
+                    visibleRect: Self.sourceRect,
                     recolouring: appearance.bearRecolouring
                 )
                 .scaleEffect(
-                    x: 1 + bellyBounceAmount * 0.08,
-                    y: 1 - bellyBounceAmount * 0.07,
+                    x: 1 + bounceAmount * 0.08,
+                    y: 1 - bounceAmount * 0.07,
                     anchor: .center
                 )
-                .offset(y: bellyBounceAmount * 5.5)
+                .offset(y: bounceAmount * 5.5)
 
-                Ellipse()
+                // The whole bear, not a patch of it. It was an ellipse over the belly, which meant
+                // most of the animal — head, arms, legs — did nothing when you clicked it, and
+                // nothing on screen said where the live part was. The window already answers for
+                // the bear's whole box (`RigLayout.bearCovers`), so this is the region the pointer
+                // was being captured for anyway.
+                Rectangle()
                     .fill(Color.clear)
-                    .contentShape(Ellipse())
-                    .frame(width: bellyRegion.width, height: bellyRegion.height)
-                    .position(x: bellyRegion.midX, y: bellyRegion.midY)
+                    .contentShape(Rectangle())
+                    .frame(width: region.width, height: region.height)
+                    .position(x: region.midX, y: region.midY)
                     .highPriorityGesture(
                         TapGesture()
                             .onEnded {
-                                triggerBellyBounce()
-                                onBellyTap()
+                                triggerBounce()
+                                onTap()
                             }
                     )
-                    .accessibilityLabel("ParaBear belly")
+                    .accessibilityLabel("ParaBear")
             }
         }
-        .aspectRatio(204 / 371, contentMode: .fit)
+        .aspectRatio(Self.sourceRect.width / Self.sourceRect.height, contentMode: .fit)
         .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 8)
         .accessibilityLabel("ParaBear")
     }
 
-    private func triggerBellyBounce() {
+    private func triggerBounce() {
         withAnimation(.spring(response: 0.10, dampingFraction: 0.36)) {
-            bellyBounceAmount = 1
+            bounceAmount = 1
         }
 
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(80))
             withAnimation(.spring(response: 0.34, dampingFraction: 0.34)) {
-                bellyBounceAmount = 0
+                bounceAmount = 0
             }
         }
     }
 }
 
-enum BearBellyInteraction {
+/// Where a click on the bear counts.
+///
+/// The whole of it. This used to be an ellipse over the belly — about a fifth of the figure — and
+/// the rest of the bear was inert with nothing to say so. A target you cannot see has to be the
+/// obvious one, and on a drawing of an animal the obvious one is the animal.
+///
+/// It is the bear's **box**, not its silhouette, which means the empty corners either side of the
+/// head count too. That is deliberate: the window already hands this exact box to the rig rather
+/// than to the desktop (`RigLayout.bearCovers`), so those corners were being taken from whatever is
+/// behind the bear regardless — the choice is only whether they do anything once taken.
+enum BearTapTarget {
     static func region(in size: CGSize) -> CGRect {
-        CGRect(
-            x: size.width * 0.23,
-            y: size.height * 0.39,
-            width: size.width * 0.54,
-            height: size.height * 0.38
-        )
+        CGRect(origin: .zero, size: size)
     }
 }

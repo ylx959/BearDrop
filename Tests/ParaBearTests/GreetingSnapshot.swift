@@ -17,6 +17,26 @@ struct GreetingSnapshot {
         settings.animationIntensity = 0
         let viewModel = EventTimelineViewModel(calendarService: CalendarService(), settings: settings)
         viewModel.isExpanded = true
+        viewModel.showRemarkForSnapshot("I'm watching you procrastinate.")
+
+        // A contact sheet of the bubble alone at every remark, so the longest and shortest can be
+        // compared side by side — that comparison is what the width is chosen on.
+        let sheet = VStack(alignment: .leading, spacing: 4) {
+            ForEach(BearRemark.all, id: \.self) { remark in
+                BearGreetingBubble(remark: remark)
+            }
+        }
+        .padding(16)
+        .background(Color(white: 0.86))
+
+        let sheetRenderer = ImageRenderer(content: sheet)
+        sheetRenderer.scale = 2
+        if let nsImage = sheetRenderer.nsImage,
+           let data = nsImage.tiffRepresentation,
+           let bitmap = NSBitmapImageRep(data: data),
+           let png = bitmap.representation(using: .png, properties: [:]) {
+            try png.write(to: URL(fileURLWithPath: dir).appendingPathComponent("remarks.png"))
+        }
 
         let scene = ZStack {
             LinearGradient(

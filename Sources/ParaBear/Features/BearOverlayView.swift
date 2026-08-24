@@ -55,7 +55,7 @@ struct BearOverlayView: View {
                     BearCharacterView(
                         mood: viewModel.mood,
                         appearance: settings.appearance,
-                        onBellyTap: {
+                        onTap: {
                             withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
                                 viewModel.toggleExpanded()
                             }
@@ -92,15 +92,10 @@ struct BearOverlayView: View {
                     )
 
                     if viewModel.isExpanded {
-                        // Placed by the tail's **tip**, not by the bubble's corner: the corner is
-                        // wherever the artwork's box happens to put it, and the thing that has to
-                        // land on the bear is the point the tail aims at.
-                        BearGreetingBubble(userName: CurrentUserGreeting.displayName)
+                        BearGreetingBubble(remark: viewModel.remark)
                             .offset(
-                                x: Self.bubbleTarget.x - BearGreetingBubble.tailTip.x
-                                    + motion.canopyHorizontalOffset,
-                                y: Self.bubbleTarget.y - BearGreetingBubble.tailTip.y
-                                    + motion.verticalBob
+                                x: RigLayout.greetingRect.minX + motion.canopyHorizontalOffset,
+                                y: RigLayout.greetingRect.minY + motion.verticalBob
                             )
                             .transition(.opacity.combined(with: .scale(scale: 0.92, anchor: .bottomLeading)))
                     }
@@ -110,13 +105,6 @@ struct BearOverlayView: View {
         }
         .frame(width: RigLayout.windowSize.width, height: RigLayout.windowSize.height, alignment: .topLeading)
     }
-
-    /// Where the greeting's tail points: the bear's own upper body, a little left of its middle.
-    /// The bubble hangs above and to the left of this, because that is the way the tail is drawn.
-    static let bubbleTarget = CGPoint(
-        x: RigLayout.bearRect.midX - 24,
-        y: RigLayout.bearRect.minY + 34
-    )
 }
 
 private struct RiggingLinesView: View {

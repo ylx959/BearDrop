@@ -8,6 +8,11 @@ MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 RESOURCE_BUNDLE="ParaBear_ParaBear.bundle"
 
+# Built fresh. SwiftPM copies resources into the bundle but never removes ones that have gone from
+# the source tree, so an incremental build keeps shipping deleted artwork — three files that no
+# longer exist were still riding along in the .app before this line.
+rm -rf "$ROOT_DIR/.build/release/$RESOURCE_BUNDLE"
+
 swift build -c release --package-path "$ROOT_DIR"
 
 rm -rf "$APP_DIR"
@@ -16,7 +21,13 @@ mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 cp "$ROOT_DIR/.build/release/ParaBear" "$MACOS_DIR/ParaBear"
 cp "$ROOT_DIR/Packaging/Info.plist" "$CONTENTS_DIR/Info.plist"
 cp "$ROOT_DIR/Sources/ParaBear/Resources/PrivacyInfo.xcprivacy" "$RESOURCES_DIR/PrivacyInfo.xcprivacy"
-cp "$ROOT_DIR/Packaging/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
+# The icon is generated, not stored: `Assets/AppIcon.png` is the picture, and the .icns is built
+# from the same code that drew it. Each size is rendered at its own scale rather than resampled
+# down from 1024 — the paw's toes are small enough at 16pt that resampling turns them to mush.
+ICONSET="$ROOT_DIR/.build/AppIcon.iconset"
+rm -rf "$ICONSET"
+swift "$ROOT_DIR/Scripts/make_icon.swift" "$ICONSET" "$ROOT_DIR/Sources/ParaBear/Assets/AppIcon.png"
+iconutil -c icns "$ICONSET" -o "$RESOURCES_DIR/AppIcon.icns"
 
 # The SVG art lives in a bundle SwiftPM builds separately, and without this the packaged app has
 # no artwork at all — its only other candidate is an absolute path into *this* machine's .build

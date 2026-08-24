@@ -53,11 +53,11 @@ struct CanopySnapshot {
                             .secondary.opacity(0.46),
                             style: StrokeStyle(lineWidth: RiggingLines.lineWidth, lineCap: .round)
                         )
-                        .frame(width: width, height: 118)
+                        .frame(width: width, height: RigLayout.linesHeight)
                 }
 
                 BearCharacterView(mood: .alert, appearance: appearance)
-                    .frame(width: 106, height: 192)
+                    .frame(width: RigLayout.bearSize.width, height: RigLayout.bearSize.height)
             }
         }
         .frame(width: width + 120, height: height + 380)

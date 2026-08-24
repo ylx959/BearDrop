@@ -5,10 +5,6 @@ import SwiftUI
 final class BearOverlayWindowController {
     static let maxTravelFromCenterRatio: CGFloat = 0.46
 
-    /// Width of the widest thing actually drawn in the overlay (the parachute card). The window
-    /// is much wider than this, so it can hang off the screen edge by the leftover padding
-    /// without clipping the bear — that padding is usable horizontal travel.
-    static let contentWidth: CGFloat = 244
     static let contentEdgeMargin: CGFloat = 24
     /// Time constant for smoothing the hand's speed. The pointer is quantised to whole points and
     /// arrives unevenly, so even sampled on a steady clock a raw difference is spiky.
@@ -45,8 +41,9 @@ final class BearOverlayWindowController {
     init<Content: View>(rootView: Content, driftState: BearDriftState) {
         self.driftState = driftState
 
-        // `RigHostingView` rather than `NSHostingView`: the panel is far larger than the rig, and
-        // this is what stops the empty air around it eating the desktop's clicks.
+        // `RigHostingView` carries no behaviour of its own — what stops the empty air around the
+        // rig eating the desktop's clicks is `updateClickThrough`. The type exists to hold the note
+        // saying why overriding `hitTest` there is not the answer.
         let contentView = RigHostingView(rootView: rootView)
         contentView.frame = NSRect(origin: .zero, size: RigLayout.windowSize)
         contentView.wantsLayer = true
@@ -192,11 +189,11 @@ final class BearOverlayWindowController {
 
     /// Lets the pointer through everywhere the rig is not drawn.
     ///
-    /// `RigHostingView.hitTest` is not enough on its own, and the reason is worth keeping: hit
-    /// testing decides which *view inside this window* receives an event that the window server has
-    /// already handed to this window. Refusing it there means nothing takes the click — not that
-    /// the application underneath gets it. `ignoresMouseEvents` is the only switch that makes the
-    /// window itself transparent to the pointer.
+    /// Overriding `hitTest` on the content view is not enough, and the reason is worth keeping:
+    /// hit testing decides which *view inside this window* receives an event that the window server
+    /// has already handed to this window. Refusing it there means nothing takes the click — not
+    /// that the application underneath gets it. `ignoresMouseEvents` is the only switch that makes
+    /// the window itself transparent to the pointer.
     ///
     /// So it is steered from the drift loop, which already runs every frame the rig is on screen.
     /// The pointer is read from `NSEvent.mouseLocation` rather than from tracking areas, because a
@@ -204,16 +201,24 @@ final class BearOverlayWindowController {
     private func updateClickThrough() {
         // Never while it is being carried: the hand can outrun the rig, and a window that stopped
         // taking events mid-drag would drop the bear wherever the pointer left it.
-        guard !driftState.isBeingCarried else {
-            window.ignoresMouseEvents = false
-            return
+        let ignores: Bool
+
+        if driftState.isBeingCarried {
+            ignores = false
+        } else {
+            ignores = Self.passesThrough(
+                pointer: NSEvent.mouseLocation,
+                windowFrame: window.frame,
+                pose: driftState.rigPose
+            )
         }
 
-        window.ignoresMouseEvents = Self.passesThrough(
-            pointer: NSEvent.mouseLocation,
-            windowFrame: window.frame,
-            pose: driftState.rigPose
-        )
+        // Only when it actually changes. Assigning the value the window already has is not free —
+        // it is a round trip to the window server either way — and the answer only changes when the
+        // pointer crosses the rig's outline, not on every one of the sixty frames a second.
+        if window.ignoresMouseEvents != ignores {
+            window.ignoresMouseEvents = ignores
+        }
     }
 
     /// Whether a click at this screen point belongs to whatever is behind the rig.
@@ -224,9 +229,16 @@ final class BearOverlayWindowController {
     static func passesThrough(
         pointer: CGPoint,
         windowFrame: NSRect,
-        pose: RigPose = .resting
+        pose: RigPose
     ) -> Bool {
-        !RigLayout.contains(
+        // Most of the time the pointer is not over the window at all, and the rig's outline is the
+        // expensive question. Ask the cheap one first.
+        guard windowFrame
+            .insetBy(dx: -RigLayout.grabMargin, dy: -RigLayout.grabMargin)
+            .contains(pointer)
+        else { return true }
+
+        return !RigLayout.contains(
             CGPoint(x: pointer.x - windowFrame.minX, y: windowFrame.maxY - pointer.y),
             pose: pose
         )
@@ -367,7 +379,7 @@ final class BearOverlayWindowController {
         let travel = visibleFrame.width * maxTravelFromCenterRatio
         // Bound the visible content, not the window. The window's empty side padding may sit
         // off-screen, which is what lets the bear reach much further left and right.
-        let sideInset = max(0, (windowWidth - contentWidth) / 2)
+        let sideInset = max(0, (windowWidth - RigLayout.cardWidth) / 2)
         let screenMinX = visibleFrame.minX + contentEdgeMargin - sideInset
         let screenMaxX = visibleFrame.maxX - windowWidth - contentEdgeMargin + sideInset
         let lower = max(screenMinX, centerX - travel)

@@ -55,7 +55,7 @@ struct RigAppearanceTests {
     /// The files on disk are authored in the dark scheme, and `bearRecolouring` is written against
     /// that. If the artwork is ever re-exported in different colours this is what says so.
     @Test func theArtworkOnDiskIsInTheDarkScheme() throws {
-        for name in ["bear", "bear_body", "bear_wave_arm"] {
+        for name in ["bear"] {
             let url = try #require(
                 SVGAssetView.assetURL(resourceName: name, subdirectory: "Bear")
             )

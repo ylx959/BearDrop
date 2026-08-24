@@ -36,14 +36,14 @@ struct BearSwingTrajectoryTests {
         )
     }
 
-    private static func descent() -> Path {
-        let duration = PlannedFlightSpeed.slow.flightDuration
+    private static func descent(speed: PlannedFlightSpeed) -> Path {
+        let duration = speed.flightDuration
         let sway = DescentSway.random(room: 574, screenWidth: 1_440, flightDuration: duration)
         let dt = 1.0 / 120
         let times = (0..<Int(duration / dt)).map { Double($0) * dt }
 
         return Path(
-            name: "descent sweep",
+            name: "descent sweep (\(speed.rawValue))",
             dt: dt,
             offset: times.map { sway.offset(at: $0) },
             velocity: times.map { sway.velocity(at: $0) },
@@ -58,8 +58,13 @@ struct BearSwingTrajectoryTests {
         )
     }
 
+    /// Every planned speed, because the sweep is sized to the time it has: a flight given half as
+    /// long turns twice as sharply, and the rules have to survive the fastest one too.
     private static func paths() -> [Path] {
-        (0..<20).map { inPlace(seed: Double($0) * 137) } + (0..<20).map { _ in descent() }
+        (0..<20).map { inPlace(seed: Double($0) * 137) }
+            + PlannedFlightSpeed.allCases.flatMap { speed in
+                (0..<7).map { _ in descent(speed: speed) }
+            }
     }
 
     /// Indices where the path turns around, and the fastest moment between each pair.

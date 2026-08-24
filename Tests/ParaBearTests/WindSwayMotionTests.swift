@@ -5,57 +5,29 @@ import Testing
 struct WindSwayMotionTests {
     // MARK: - The two rules
 
-    /// Rule 1. Sliding left leans the bear right; sliding right leans it left. Sampled at the
-    /// middle of a stroke, where the rig is at full speed and not yet turning.
-    @Test func travellingLeansTheBearTheOtherWay() {
+    /// The two rules, as they reach the bear through the motion the view actually samples.
+    /// `BearSwingTrajectoryTests` proves the rules hold over whole trajectories; what is left for
+    /// here is that `WindSwayMotion.sample` wires the drift into them the right way round, and at
+    /// full size. Sampled at the middle of each stroke, where the rig is at full speed and not yet
+    /// turning, and then at the end, where it turns around.
+    @Test func theTwoRulesReachTheBearThroughTheSampledMotion() {
         for time in midStrokeTimes(count: 12) {
             let velocity = RigSway.velocity(at: time, seed: 0)
-            let motion = sample(at: time)
+            let lean = sample(at: time).payloadRotationDegrees
 
-            // Positive degrees swings the body left, so it must share the sign of the travel.
-            #expect(motion.payloadRotationDegrees.sign == velocity.sign)
-            #expect(abs(motion.payloadRotationDegrees) > BearSwing.trailDegrees * 0.75)
+            // Rule 1. Positive degrees swings the body left, so it must share the sign of travel.
+            #expect(lean.sign == velocity.sign)
+            #expect(abs(lean) > BearSwing.trailDegrees * 0.75)
         }
-    }
 
-    /// Rule 1, in the units it was asked for: a normal stroke at full speed leans the bear by
-    /// exactly `trailDegrees`.
-    @Test func aNormalStrokeLeansTheStatedAmount() {
-        let lean = BearSwing.degrees(
-            velocity: RigSway.nominalSpeed,
-            acceleration: 0,
-            nominalSpeed: RigSway.nominalSpeed,
-            nominalTurn: RigSway.nominalTurn
-        )
-
-        #expect(abs(lean - BearSwing.trailDegrees) < 0.001)
-    }
-
-    /// Rule 2. At the far left of a stroke the rig turns around and the bear carries on, so it
-    /// swings left — the opposite side to the lean it was holding on the way there.
-    @Test func reachingTheEndOfAStrokeThrowsTheBearOnward() {
         for time in strokeEndTimes(count: 12) {
             let offset = RigSway.offset(at: time, seed: 0)
-            let motion = sample(at: time)
+            let lean = sample(at: time).payloadRotationDegrees
 
-            // At the far left the offset is negative and the body swings left: positive degrees.
-            #expect(motion.payloadRotationDegrees.sign != offset.sign)
-            #expect(abs(motion.payloadRotationDegrees) > BearSwing.turnDegrees * 0.3)
-        }
-    }
-
-    /// The two rules are genuinely opposed: whichever way the bear leans crossing the middle of a
-    /// stroke, it is on the other side by the time that stroke ends.
-    @Test func theSwingReversesBetweenMidStrokeAndTheEndOfIt() {
-        let rate = RigSway.strokeRate
-
-        for stroke in 0..<8 {
-            // Full speed leftward, then a quarter period later, the far left of the stroke.
-            let midStroke = (Double(stroke) * 2 * .pi + .pi) / rate
-            let strokeEnd = midStroke + (.pi / 2) / rate
-
-            #expect(sample(at: midStroke).payloadRotationDegrees < 0)
-            #expect(sample(at: strokeEnd).payloadRotationDegrees > 0)
+            // Rule 2. At the far left the offset is negative and the bear carries on left, so the
+            // lean has come off the side it held on the way there.
+            #expect(lean.sign != offset.sign)
+            #expect(abs(lean) > BearSwing.turnDegrees * 0.3)
         }
     }
 

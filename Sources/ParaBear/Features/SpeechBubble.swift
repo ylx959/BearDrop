@@ -32,9 +32,12 @@ struct SpeechBubble: Shape {
         height(forWidth: width) * bodyShare
     }
 
-    /// The point the tail aims at, in the bubble's own coordinates. Callers place the bubble by
-    /// this rather than by its corner: the corner is wherever the artwork's box happens to put it,
-    /// but the tip is the thing that has to land on the bear.
+    /// The point the tail aims at, in the bubble's own coordinates.
+    ///
+    /// A measurement of the artwork, **not** a placement anchor. Placing the bubble by its tip is
+    /// the obvious thing and it is wrong — the capsule's right end reaches about a tenth of the
+    /// width further right than the tip does, so putting the tip on the bear lays the body across
+    /// it. `RigLayout.greetingRect` places by the trailing edge instead.
     static func tailTip(forWidth width: CGFloat) -> CGPoint {
         CGPoint(x: width * tipShare.x, y: height(forWidth: width) * tipShare.y)
     }

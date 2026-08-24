@@ -6,7 +6,23 @@ import AppKit
 // two read as the same app. Its colour is the bear's own #14161C rather than #000: a pure black
 // mark on white reads as a hole punched in the icon, which is the same reason the artwork avoids it.
 
-let fur = NSColor(srgbRed: 0x14 / 255.0, green: 0x16 / 255.0, blue: 0x1C / 255.0, alpha: 1)
+// Kept as the hex string the app states in `RigAppearance.black`, not as separate components, so
+// `AppIconTests` can read this file and check the two still agree. The script runs in interpreter
+// mode and cannot import the module, so a text match is the only guard available.
+let furHex = "#14161C"
+
+func colour(_ hex: String) -> NSColor {
+    let digits = hex.dropFirst()
+    let value = UInt32(digits, radix: 16) ?? 0
+    return NSColor(
+        srgbRed: CGFloat((value >> 16) & 0xFF) / 255.0,
+        green: CGFloat((value >> 8) & 0xFF) / 255.0,
+        blue: CGFloat(value & 0xFF) / 255.0,
+        alpha: 1
+    )
+}
+
+let fur = colour(furHex)
 
 /// macOS's icon grid: the body does not fill the canvas. A full-bleed square sits noticeably larger
 /// than every other icon in the Dock, because the system sizes them all against this inset.
@@ -77,6 +93,14 @@ func icon(side: CGFloat) -> NSImage {
     }
 }
 
+/// Takes the pixel size and nothing else — `icon(side:)` is called with it here rather than by the
+/// caller, so the drawn size and the written size cannot disagree. They are two numbers that must
+/// always match, and a mismatch would silently resample the icon, which is the one thing the
+/// per-size rendering below exists to avoid.
+func writeIcon(pixels: Int, to url: URL) throws {
+    try write(icon(side: CGFloat(pixels)), to: url, pixels: pixels)
+}
+
 func write(_ image: NSImage, to url: URL, pixels: Int) throws {
     let rep = NSBitmapImageRep(
         bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels,
@@ -91,7 +115,13 @@ func write(_ image: NSImage, to url: URL, pixels: Int) throws {
     try rep.representation(using: .png, properties: [:])!.write(to: url)
 }
 
+// make_icon.swift <iconset-directory> <source-png>
+//
+// The PNG in `Assets` is the icon as a picture — the thing to open and look at, and the only copy
+// of it kept in the repo. The `.icns` is not committed beside it: two files that have to agree are
+// two files that can stop agreeing, and this one is a build product of the other.
 let out = URL(fileURLWithPath: CommandLine.arguments[1])
+let sourcePNG = URL(fileURLWithPath: CommandLine.arguments[2])
 try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
 
 // Each size is drawn at its own scale rather than downsampled from 1024 — the paw's toes are small
@@ -104,7 +134,28 @@ let sizes: [(String, Int)] = [
     ("icon_512x512", 512), ("icon_512x512@2x", 1024)
 ]
 
+// The iconset names ten slots but only seven distinct pixel sizes — 32, 256 and 512 each appear
+// twice (16@2x/32, 128@2x/256, 256@2x/512). Identical pixel counts produce identical files, so each
+// size is drawn once and the duplicates are copied. This does not weaken the rule above: what
+// matters is that nothing is *resampled*, not that it is redrawn.
+var drawn: [Int: URL] = [:]
+
 for (name, pixels) in sizes {
-    try write(icon(side: CGFloat(pixels)), to: out.appendingPathComponent("\(name).png"), pixels: pixels)
+    let url = out.appendingPathComponent("\(name).png")
+
+    if let already = drawn[pixels] {
+        try FileManager.default.copyItem(at: already, to: url)
+    } else {
+        try writeIcon(pixels: pixels, to: url)
+        drawn[pixels] = url
+    }
 }
-print("wrote \(sizes.count) sizes to \(out.path)")
+
+if let thousand = drawn[1024] {
+    try? FileManager.default.removeItem(at: sourcePNG)
+    try FileManager.default.copyItem(at: thousand, to: sourcePNG)
+} else {
+    try writeIcon(pixels: 1024, to: sourcePNG)
+}
+
+print("wrote \(sizes.count) sizes to \(out.path) and \(sourcePNG.lastPathComponent)")

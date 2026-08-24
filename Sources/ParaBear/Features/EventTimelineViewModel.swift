@@ -9,6 +9,9 @@ final class EventTimelineViewModel: ObservableObject {
     @Published private(set) var countdownText = "Loading"
     @Published private(set) var mood: BearMood = .calm
     @Published var isExpanded = false
+    /// What the bear is saying right now. Chosen when the bubble opens and then held — see
+    /// `BearRemark`.
+    @Published private(set) var remark = BearRemark.all[0]
     let reminderFlights = PassthroughSubject<ReminderMilestone, Never>()
 
     private let calendarService: CalendarService
@@ -62,8 +65,18 @@ final class EventTimelineViewModel: ObservableObject {
         }
     }
 
+    /// Pins the remark, so `GreetingSnapshot` can render the longest one — the case the bubble's
+    /// width is chosen on — rather than whichever line the shuffle happened to land on.
+    func showRemarkForSnapshot(_ remark: String) {
+        self.remark = remark
+    }
+
     func toggleExpanded() {
         isExpanded.toggle()
+
+        if isExpanded {
+            remark = BearRemark.next(after: remark)
+        }
     }
 
     private func tick() async {
