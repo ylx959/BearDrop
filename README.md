@@ -122,4 +122,4 @@ Each folder owns one reason to change: pure math and models in `Domain` and `Ani
 
 ## Rights
 
-© 2026 BearDrop. The source is open for use and convenience — the bear artwork and canopy design are not licensed for reuse. 
+© 2026 BearDrop. The code is open for use and convenience — the bear artwork and canopy design are not licensed for reuse. 
