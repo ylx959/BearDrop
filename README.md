@@ -34,10 +34,7 @@ A native macOS menu-bar companion that keeps your schedule out of your head and 
 - **Call ParaBear** — fly it now, with whatever is actually coming up
 - **Quit ParaBear**
 
-The run-up is the lead split into equal steps, so 15 minutes in 3 times is 15, 10 and 5. The line
-under the two controls spells the result out — you never have to do that division yourself. The
-flight as the event begins is always on top of the count, so one reminder still means one on the
-approach and one as it starts.
+
 
 ## Requirements
 
