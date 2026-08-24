@@ -9,7 +9,8 @@ A native macOS menu-bar companion that keeps your schedule out of your head and 
 - Flies at 10, 5 and 3 minutes before an event, at its start, and once more five minutes after
 - Countdown warms from grey to amber to red as the time closes in
 - Grab the bear and put it down anywhere — the descent carries on from where you drop it
-- Tap its belly for a greeting; tap the canopy to open that day in Google Calendar
+- Poke the bear and it has an opinion about your afternoon; tap the canopy to open that day in Google Calendar
+- Lives in the menu bar, and in the Dock as a second way to the same menu
 - One flight at a time: a busy morning gets a bear, not a pile-up
 - Its own Light/Dark scheme, independent of the system's — it floats over your desktop, not inside a window
 - Reads Apple Calendar through EventKit; nothing leaves your Mac and there is nothing to sign into
@@ -34,31 +35,44 @@ A native macOS menu-bar companion that keeps your schedule out of your head and 
 
 ## Install
 
-Requires macOS 15 (Sequoia) or later, and a toolchain with **Swift 6.2** — Xcode 26 / Command Line Tools 26 or newer. An older toolchain stops at the first line of `Package.swift` with a version error rather than anything that explains itself. Check with `swift --version`; install the tools with `xcode-select --install`.
+Requires macOS 15 or later and Swift 6.2 — Xcode 26 / Command Line Tools 26 or newer. Check with `swift --version`, install with `xcode-select --install`.
 
 ```bash
 git clone https://github.com/ylx959/BearDrop.git
 cd BearDrop
 Scripts/package_app.sh
-rm -rf /Applications/ParaBear.app          # replacing, not merging — see below
+rm -rf /Applications/ParaBear.app     # replace, don't merge: cp -R into an existing .app breaks its signature
 cp -R .build/ParaBear.app /Applications/
 open /Applications/ParaBear.app
 ```
 
-The `rm -rf` matters when you already have a copy installed: `cp -R` into an existing `.app` **merges** into it rather than replacing it, so files the new build no longer ships stay behind, and the signature then fails to verify (`a sealed resource is missing or invalid`).
+ParaBear has no window: it lives as the paw-print calendar in the menu bar, and clicking its Dock icon opens that same menu. Choose **Allow Full Access** when macOS asks, then **Call ParaBear** to check it works.
 
-There is no Dock icon and no window — look for the paw-print calendar in the menu bar. macOS asks for Calendar access on first launch; choose **Allow Full Access**, then **Call ParaBear** to check it works.
+Calendars come from whatever Apple's Calendar app reads: add accounts once in **System Settings → General → Internet Accounts** and Google, iCloud, Exchange and CalDAV all appear.
 
-Calendars come from whatever Apple's Calendar app reads, so add accounts once in **System Settings → General → Internet Accounts**. Google, iCloud, Exchange and CalDAV all appear with nothing further to configure.
+Launch at login: **System Settings → General → Login Items & Extensions → Open at Login → +**, and pick `/Applications/ParaBear.app`.
 
-To launch at login: **System Settings → General → Login Items & Extensions → Open at Login → +**, and pick `/Applications/ParaBear.app`.
+## Updating
+
+ParaBear never contacts anything, so it cannot tell you a new version exists. Pull and rebuild when you want one:
+
+```bash
+pkill -f ParaBear                     # quit first, or `open` starts a second bear
+cd BearDrop && git pull
+Scripts/package_app.sh
+rm -rf /Applications/ParaBear.app
+cp -R .build/ParaBear.app /Applications/
+open /Applications/ParaBear.app
+```
+
+Expect macOS to ask for Calendar access again — an ad-hoc signature pins permission to one exact build. Your settings are outside the app and survive. New artwork ships inside it, so a new bear arrives by rebuilding too.
 
 ## Troubleshooting
 
-- **"Calendar unavailable"** — access was denied. Re-enable it in **System Settings → Privacy & Security → Calendars**, or reset the prompt with `tccutil reset Calendar com.parabear.desktop` and reopen the app.
-- **Nothing in the menu bar** — the bar is full and macOS hid the icon. Check with `pgrep -f ParaBear` that it is running.
+- **"Calendar unavailable"** — re-enable it in **System Settings → Privacy & Security → Calendars**, or reset the prompt with `tccutil reset Calendar com.parabear.desktop` and reopen the app.
+- **Nothing in the menu bar** — the bar is full and macOS hid the icon. Click the Dock icon instead; it opens the same menu.
 - **The bear never appears on its own** — it only flies for events starting within the next hour. A quiet afternoon is silent by design.
-- **"Apple could not verify ParaBear is free of malware"** — you ran a downloaded `.app` rather than one you built. Building it yourself avoids this.
+- **"Apple could not verify ParaBear is free of malware"** — that is a downloaded `.app`, not one you built.
 
 Uninstall:
 
@@ -90,17 +104,17 @@ swift test --filter BearSwingTrajectoryTests
 ```text
 Sources/ParaBear
 ├─ App/            # @main, composition root, menu bar item and its icon
-├─ Domain/         # pure models and rules — milestones, flight queue, rig pose
-├─ Services/       # EventKit access and polling; where the packaged art lives
+├─ Domain/         # pure models and rules — milestones, flight queue, rig pose, what the bear says
+├─ Services/       # EventKit access and polling, the hand-off to Google Calendar, where the art lives
 ├─ Overlay/        # the NSPanel, its drift loop, and click-through
 ├─ Features/       # SwiftUI views and view models — the rig, the canopy, the card
 ├─ Animation/      # motion math, all pure functions of elapsed time
 ├─ Settings/       # UserDefaults-backed preferences and the Settings scene
-├─ Assets/         # SVG source art, shipped as a resource bundle
+├─ Assets/         # SVG source art shipped as a resource bundle, and the app icon
 └─ Resources/      # privacy manifest
 
 Packaging/         # Info.plist and entitlements
-Scripts/           # package_app.sh — release build, assemble, codesign
+Scripts/           # package_app.sh — release build, assemble, codesign; make_icon.swift draws the icon
 Tests/             # swift-testing suites
 ```
 
@@ -108,4 +122,4 @@ Each folder owns one reason to change: pure math and models in `Domain` and `Ani
 
 ## Rights
 
-© 2026 BearDrop. The source is published for review; the bear artwork and canopy design are not licensed for reuse.
+© 2026 BearDrop. The source is open for use and convenience — the bear artwork and canopy design are not licensed for reuse. 

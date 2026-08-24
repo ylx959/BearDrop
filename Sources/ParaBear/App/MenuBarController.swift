@@ -135,6 +135,13 @@ final class MenuBarController {
         return row
     }
 
+    /// Opens the menu exactly as clicking the status item does — same highlight, same menu, same
+    /// dismissal. Building a second `NSMenu` to pop up elsewhere would be two menus to keep in
+    /// agreement; this is the one that is already there.
+    func openMenu() {
+        statusItem.button?.performClick(nil)
+    }
+
     private func customItem(view: NSView) -> NSMenuItem {
         let item = NSMenuItem()
         item.view = view

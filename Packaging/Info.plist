@@ -22,8 +22,6 @@
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>15.0</string>
-	<key>LSUIElement</key>
-	<true/>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>ParaBear reads your calendar events to show the next upcoming event on the parachute.</string>
 	<key>NSCalendarsUsageDescription</key>
