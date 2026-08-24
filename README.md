@@ -2,20 +2,17 @@
 
 A native macOS menu-bar companion that keeps your schedule out of your head and in your workspace. A parachuting bear drops in only when something is coming up, says what it is, and drifts away.
 
-- Inspired by the experience of  Calendar reminders getting buried under a mountain of notifications — and me remembering the meeting or event only after getting yelled at......
+- Inspired by the experience of  Calendar reminders getting buried under a mountain of notifications — and me remembering the meeting or event only after getting yelled at......😭😅
 
-![ParaBear](Sources/ParaBear/Assets/beardrop-wordmark.png)
+![ParaBear](Sources/ParaBear/Assets/for_readme.png)
 
 ## Highlights
 
-- Flies at 10, 5 and 3 minutes before an event, at its start, and once more five minutes after
-- Countdown warms from grey to amber to red as the time closes in
-- Grab the bear and put it down anywhere — the descent carries on from where you drop it
-- Poke the bear and it has an opinion about your afternoon; tap the canopy to open that day in Google Calendar
-- Lives in the menu bar, and in the Dock as a second way to the same menu
-- One flight at a time: a busy morning gets a bear, not a pile-up
-- Its own Light/Dark scheme, independent of the system's — it floats over your desktop, not inside a window
-- Reads Apple Calendar through EventKit; nothing leaves your Mac and there is nothing to sign into
+- **Impossible to miss** — not another notification in the stack; a bear parachutes across your screen
+- **You set the schedule** — how early the run-up starts and how many flights fit in it, plus one as the event begins
+- **Never piles up** — one flight at a time, so a back-to-back morning gets a bear, not a queue
+- **Move it, poke it, tap it** — drop the bear anywhere and the descent carries on; the canopy opens that day in Google Calendar
+- **Stays on your Mac** — reads Apple Calendar through EventKit; nothing to sign into, nothing sent anywhere
 
 ## Built with
 
@@ -30,10 +27,17 @@ A native macOS menu-bar companion that keeps your schedule out of your head and 
 ![menu_bar function](Sources/ParaBear/Assets/menu_bar.png)
 
 - **Calendar connection** — green once macOS has granted access
+- **First reminder** — how far out the run-up starts: 15, 10 or 5 minutes
+- **Times** — how many flights fit in it: 1, 2 or 3
 - **Drop speed** — Slow / Normal / Fast
 - **Appearance** — Light or Dark
 - **Call ParaBear** — fly it now, with whatever is actually coming up
 - **Quit ParaBear**
+
+The run-up is the lead split into equal steps, so 15 minutes in 3 times is 15, 10 and 5. The line
+under the two controls spells the result out — you never have to do that division yourself. The
+flight as the event begins is always on top of the count, so one reminder still means one on the
+approach and one as it starts.
 
 ## Requirements
 
@@ -113,7 +117,7 @@ swift test --filter BearSwingTrajectoryTests
 ```text
 Sources/ParaBear
 ├─ App/            # @main, composition root, menu bar item and its icon
-├─ Domain/         # pure models and rules — milestones, flight queue, rig pose, what the bear says
+├─ Domain/         # pure models and rules — the reminder schedule, flight queue, rig pose, what the bear says
 ├─ Services/       # EventKit access and polling, the hand-off to Google Calendar, where the art lives
 ├─ Overlay/        # the NSPanel, its drift loop, and click-through
 ├─ Features/       # SwiftUI views and view models — the rig, the canopy, the card
