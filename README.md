@@ -2,6 +2,8 @@
 
 A native macOS menu-bar companion that keeps your schedule out of your head and in your workspace. A parachuting bear drops in only when something is coming up, says what it is, and drifts away.
 
+- Inspired by the experience of  Calendar reminders getting buried under a mountain of notifications — and me remembering the meeting or event only after getting yelled at......
+
 ![ParaBear](Sources/ParaBear/Assets/beardrop-wordmark.png)
 
 ## Highlights

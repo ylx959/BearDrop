@@ -66,17 +66,26 @@ struct EventTimelineViewModelTests {
     /// The last milestone hands over to the next event. With nothing behind it the bear would fly
     /// in only to say there is nothing to say.
     @Test func theFinalFlightIsSkippedWhenThereIsNothingToHandOverTo() {
-        #expect(!EventTimelineViewModel.isWorthFlying(.underway, handingOverTo: nil))
+        let handover = ReminderSchedule(lead: .ten, count: .three).milestones.last!
+
+        #expect(!EventTimelineViewModel.isWorthFlying(handover, handingOverTo: nil))
         #expect(
-            EventTimelineViewModel.isWorthFlying(.underway, handingOverTo: event("next", startingIn: 9))
+            EventTimelineViewModel.isWorthFlying(handover, handingOverTo: event("next", startingIn: 9))
         )
     }
 
     /// Every other milestone has its own event to announce, so an empty diary behind it changes
-    /// nothing.
+    /// nothing. Checked across every schedule the menu can produce, since which milestones exist is
+    /// now the user's to choose.
     @Test func theApproachMilestonesAlwaysFly() {
-        for milestone in ReminderMilestone.allCases where !milestone.isLast {
-            #expect(EventTimelineViewModel.isWorthFlying(milestone, handingOverTo: nil))
+        for lead in ReminderLead.allCases {
+            for count in ReminderCount.allCases {
+                let milestones = ReminderSchedule(lead: lead, count: count).milestones
+
+                for milestone in milestones where !milestone.isLast {
+                    #expect(EventTimelineViewModel.isWorthFlying(milestone, handingOverTo: nil))
+                }
+            }
         }
     }
 

@@ -20,8 +20,8 @@ final class EventTimelineViewModel: ObservableObject {
     private var countdownTask: Task<Void, Never>?
     private var calendarPollingTask: Task<Void, Never>?
     private var firedReminderKeys: Set<String> = []
-    /// Events the bear is done with — see `ReminderMilestone.underway`. They stay in `todayEvents`,
-    /// they are simply never chosen again.
+    /// Events the bear is done with — see `ReminderSchedule.underwayDelay`. They stay in
+    /// `todayEvents`, they are simply never chosen again.
     private var finishedEventKeys: Set<String> = []
 
     init(calendarService: CalendarService, settings: SettingsStore) {
@@ -143,13 +143,20 @@ final class EventTimelineViewModel: ObservableObject {
         guard settings.isBearVisible else { return }
         guard let nextEvent else { return }
 
+        // Read fresh every tick rather than held, because the menu can change it between two of
+        // them. Doing so is safe in both directions and neither needs special handling: a due
+        // milestone is only ever the latest one already *passed*, so lengthening the lead cannot
+        // retrospectively fire the flights the longer schedule would have made, and shortening it
+        // cannot replay one, because the key is the offset and the offsets that survive the change
+        // keep theirs.
+        let schedule = settings.reminderSchedule
         let seconds = nextEvent.startDate.timeIntervalSince(Date())
-        guard let milestone = ReminderMilestone.dueMilestone(for: seconds) else { return }
+        guard let milestone = schedule.dueMilestone(for: seconds) else { return }
 
         let key = reminderKey(for: nextEvent, milestone: milestone)
         guard !firedReminderKeys.contains(key) else { return }
 
-        for handledMilestone in ReminderMilestone.milestonesHandled(by: milestone) {
+        for handledMilestone in schedule.milestonesHandled(by: milestone) {
             firedReminderKeys.insert(reminderKey(for: nextEvent, milestone: handledMilestone))
         }
 
@@ -187,8 +194,11 @@ final class EventTimelineViewModel: ObservableObject {
         "\(event.id)-\(Int(event.startDate.timeIntervalSince1970))"
     }
 
+    /// Names the occurrence and the point on its approach. The point is the milestone's *offset*
+    /// rather than the whole value, so that a milestone at the same moment is the same reminder
+    /// whatever schedule produced it — which is what lets the settings change mid-event.
     private func reminderKey(for event: CalendarEvent, milestone: ReminderMilestone) -> String {
-        "\(Self.eventKey(for: event))-\(milestone)"
+        "\(Self.eventKey(for: event))-\(Int(milestone.offsetFromStart))"
     }
 
     static func timeString(for date: Date) -> String {
