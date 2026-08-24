@@ -60,12 +60,13 @@ struct SVGAssetView: View {
     }
 
     static func assetURL(resourceName: String, subdirectory: String?) -> URL? {
-        let nestedURL = Bundle.module.url(
+        let bundle = Bundle.packagedResources
+        let nestedURL = bundle.url(
             forResource: resourceName,
             withExtension: "svg",
             subdirectory: subdirectory
         )
-        return nestedURL ?? Bundle.module.url(forResource: resourceName, withExtension: "svg")
+        return nestedURL ?? bundle.url(forResource: resourceName, withExtension: "svg")
     }
 
     /// Every `#rrggbb` in `svg` looked up in `recolouring`, all in **one pass**.

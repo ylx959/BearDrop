@@ -22,6 +22,14 @@ final class BearDriftState {
     /// `CarriedSwing` as a finished angle and overrides the rules entirely.
     var carriedSwingDegrees: Double?
 
+    /// Where the rig has drawn itself this frame, reported back the other way — the view is the
+    /// only thing that knows, and the window is the only thing that can act on it. It is what lets
+    /// the window hand a click to the desktop everywhere the rig is not; see `RigLayout`.
+    ///
+    /// Plain stored state for the same reason `descentTravel` is: both are read once per frame by
+    /// something already running every frame, and publishing would only add churn.
+    var rigPose = RigPose.resting
+
     private(set) var isBeingCarried = false
 
     /// Where the pointer is on screen, in screen coordinates.

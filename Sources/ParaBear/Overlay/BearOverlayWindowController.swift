@@ -45,8 +45,10 @@ final class BearOverlayWindowController {
     init<Content: View>(rootView: Content, driftState: BearDriftState) {
         self.driftState = driftState
 
-        let contentView = NSHostingView(rootView: rootView)
-        contentView.frame = NSRect(x: 0, y: 0, width: 500, height: 460)
+        // `RigHostingView` rather than `NSHostingView`: the panel is far larger than the rig, and
+        // this is what stops the empty air around it eating the desktop's clicks.
+        let contentView = RigHostingView(rootView: rootView)
+        contentView.frame = NSRect(origin: .zero, size: RigLayout.windowSize)
         contentView.wantsLayer = true
         contentView.layer?.backgroundColor = NSColor.clear.cgColor
 
@@ -188,9 +190,52 @@ final class BearOverlayWindowController {
         }
     }
 
+    /// Lets the pointer through everywhere the rig is not drawn.
+    ///
+    /// `RigHostingView.hitTest` is not enough on its own, and the reason is worth keeping: hit
+    /// testing decides which *view inside this window* receives an event that the window server has
+    /// already handed to this window. Refusing it there means nothing takes the click — not that
+    /// the application underneath gets it. `ignoresMouseEvents` is the only switch that makes the
+    /// window itself transparent to the pointer.
+    ///
+    /// So it is steered from the drift loop, which already runs every frame the rig is on screen.
+    /// The pointer is read from `NSEvent.mouseLocation` rather than from tracking areas, because a
+    /// window that is currently ignoring mouse events receives no mouse events to track with.
+    private func updateClickThrough() {
+        // Never while it is being carried: the hand can outrun the rig, and a window that stopped
+        // taking events mid-drag would drop the bear wherever the pointer left it.
+        guard !driftState.isBeingCarried else {
+            window.ignoresMouseEvents = false
+            return
+        }
+
+        window.ignoresMouseEvents = Self.passesThrough(
+            pointer: NSEvent.mouseLocation,
+            windowFrame: window.frame,
+            pose: driftState.rigPose
+        )
+    }
+
+    /// Whether a click at this screen point belongs to whatever is behind the rig.
+    ///
+    /// Screen coordinates run up from the bottom and the rig's layout is stated top-down, so the
+    /// conversion is the whole of this function and the only thing in it that can be wrong — which
+    /// is why it is stated where it can be checked rather than inline.
+    static func passesThrough(
+        pointer: CGPoint,
+        windowFrame: NSRect,
+        pose: RigPose = .resting
+    ) -> Bool {
+        !RigLayout.contains(
+            CGPoint(x: pointer.x - windowFrame.minX, y: windowFrame.maxY - pointer.y),
+            pose: pose
+        )
+    }
+
     private func advanceDrift() {
         guard let screen = NSScreen.main else { return }
         let visibleFrame = screen.visibleFrame
+        updateClickThrough()
         // The window is driven straight from the pointer's own events while it is being carried, so
         // the drift loop must keep its hands off it entirely — but it still drives the swing, and
         // the clock still takes the frame so a long carry cannot bank time and spend it on release.

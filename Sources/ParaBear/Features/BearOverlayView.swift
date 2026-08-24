@@ -20,12 +20,23 @@ struct BearOverlayView: View {
                     seed: windSeed,
                     alongside: driftState.descentTravel
                 )
+                // Reported back so the window knows where the rig actually is, and can let clicks
+                // through everywhere it is not. Written here because this is the one place that
+                // knows: the pose is a function of the timeline's own instant.
+                let _ = (driftState.rigPose = RigPose(
+                    drift: CGSize(
+                        width: motion.canopyHorizontalOffset,
+                        height: motion.verticalBob
+                    ),
+                    bearDegrees: driftState.carriedSwingDegrees ?? motion.payloadRotationDegrees
+                ))
+
                 ZStack(alignment: .topLeading) {
                     VStack(spacing: -RiggingLines.bearOverlap) {
                         // The lines' own crop starts a couple of the artwork's units above the hem,
                         // so they are pulled up by exactly that much: the tops then land on the
                         // canopy's hem, which is the bottom edge of the card.
-                        VStack(spacing: -RiggingLines.hemOverlap(forWidth: 244)) {
+                        VStack(spacing: -RiggingLines.hemOverlap(forWidth: RigLayout.cardWidth)) {
                             ParachuteEventCard(
                                 event: viewModel.nextEvent,
                                 countdownText: viewModel.countdownText,
@@ -34,10 +45,10 @@ struct BearOverlayView: View {
                                 appearance: settings.appearance,
                                 onTap: { CalendarLauncher.open(viewModel.nextEvent) }
                             )
-                            .padding(.top, 18)
+                            .padding(.top, RigLayout.cardTopInset)
 
                             RiggingLinesView()
-                                .frame(width: 244, height: 118)
+                                .frame(width: RigLayout.cardWidth, height: RigLayout.linesHeight)
                         }
                         .rotationEffect(.degrees(motion.canopyRotationDegrees), anchor: .bottom)
 
@@ -50,16 +61,23 @@ struct BearOverlayView: View {
                             }
                         }
                     )
-                        .frame(width: 106, height: 192)
+                        .frame(width: RigLayout.bearSize.width, height: RigLayout.bearSize.height)
                         .rotationEffect(
                             .degrees(driftState.carriedSwingDegrees ?? motion.payloadRotationDegrees),
                             anchor: .top
                         )
                         .contentShape(Rectangle())
                     }
-                    .frame(width: 500, alignment: .top)
+                    .frame(width: RigLayout.windowSize.width, alignment: .top)
                     .offset(x: motion.canopyHorizontalOffset, y: motion.verticalBob)
-                    .contentShape(Rectangle())
+                    // Deliberately **no** `contentShape` here. The window is 500 wide so the rig
+                    // can overhang a screen edge — see `centerTravelBounds` — but the rig itself is
+                    // only 244, and a shape on this frame handed the empty padding either side of
+                    // it to the drag gesture. That padding is over someone's desktop: it swallowed
+                    // clicks meant for whatever was behind it. Hit testing is left to the parts
+                    // that are actually drawn — the canopy answers for its own outline, the bear
+                    // for its box, the lines for their strokes — so everywhere else falls through.
+                    //
                     // Grab anywhere on the rig and put it down anywhere on screen; the descent
                     // picks up again from wherever it lands. `simultaneousGesture` with a minimum
                     // distance leaves the belly tap working.
@@ -74,19 +92,31 @@ struct BearOverlayView: View {
                     )
 
                     if viewModel.isExpanded {
+                        // Placed by the tail's **tip**, not by the bubble's corner: the corner is
+                        // wherever the artwork's box happens to put it, and the thing that has to
+                        // land on the bear is the point the tail aims at.
                         BearGreetingBubble(userName: CurrentUserGreeting.displayName)
                             .offset(
-                                x: 82 + motion.canopyHorizontalOffset,
-                                y: 228 + motion.verticalBob
+                                x: Self.bubbleTarget.x - BearGreetingBubble.tailTip.x
+                                    + motion.canopyHorizontalOffset,
+                                y: Self.bubbleTarget.y - BearGreetingBubble.tailTip.y
+                                    + motion.verticalBob
                             )
                             .transition(.opacity.combined(with: .scale(scale: 0.92, anchor: .bottomLeading)))
                     }
                 }
-                .frame(width: 500, height: 460, alignment: .topLeading)
+                .frame(width: RigLayout.windowSize.width, height: RigLayout.windowSize.height, alignment: .topLeading)
             }
         }
-        .frame(width: 500, height: 460, alignment: .topLeading)
+        .frame(width: RigLayout.windowSize.width, height: RigLayout.windowSize.height, alignment: .topLeading)
     }
+
+    /// Where the greeting's tail points: the bear's own upper body, a little left of its middle.
+    /// The bubble hangs above and to the left of this, because that is the way the tail is drawn.
+    static let bubbleTarget = CGPoint(
+        x: RigLayout.bearRect.midX - 24,
+        y: RigLayout.bearRect.minY + 34
+    )
 }
 
 private struct RiggingLinesView: View {

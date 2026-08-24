@@ -1,0 +1,47 @@
+import Foundation
+import Testing
+@testable import ParaBear
+
+/// Guards the one packaging mistake that cannot be caught by running the app here.
+///
+/// The SVG art ships in a bundle SwiftPM builds separately. `swift run` and `swift test` find it
+/// through `Bundle.module`'s fallback — an absolute path into *this* machine's `.build` directory —
+/// so an `.app` that never received the bundle works perfectly for whoever compiled it and traps
+/// with "could not load resource bundle" for everyone who installs it. That is exactly what
+/// `Scripts/package_app.sh` used to produce.
+struct PackagedResourcesTests {
+    private static var script: String {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()      // ParaBearTests
+            .deletingLastPathComponent()      // Tests
+            .deletingLastPathComponent()      // repo root
+            .appendingPathComponent("Scripts/package_app.sh")
+
+        return (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+    }
+
+    @Test func thePackagingScriptShipsTheResourceBundle() throws {
+        let script = Self.script
+        try #require(!script.isEmpty, "could not read Scripts/package_app.sh")
+
+        #expect(script.contains(Bundle.resourceBundleName))
+        // Into Contents/Resources. The .app root is where `Bundle.module` would look, and a loose
+        // bundle there is "unsealed contents present in the bundle root" — the signature stops
+        // verifying, which for an app handed to anyone else is fatal.
+        #expect(script.contains("$RESOURCES_DIR/$RESOURCE_BUNDLE"))
+        #expect(!script.contains("$APP_DIR/$RESOURCE_BUNDLE"))
+    }
+
+    /// The bundle's name is stated in both the script and the lookup, so they have to agree.
+    @Test func theScriptAndTheLookupAgreeOnTheBundlesName() throws {
+        let script = Self.script
+        try #require(!script.isEmpty)
+
+        #expect(script.contains("RESOURCE_BUNDLE=\"\(Bundle.resourceBundleName)\""))
+    }
+
+    /// And the name is the one SwiftPM actually builds: `<package>_<target>.bundle`.
+    @Test func theBundleIsNamedTheWaySwiftPMNamesIt() {
+        #expect(Bundle.resourceBundleName == "ParaBear_ParaBear.bundle")
+    }
+}

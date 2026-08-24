@@ -6,6 +6,8 @@
 	<string>ParaBear</string>
 	<key>CFBundleExecutable</key>
 	<string>ParaBear</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.parabear.desktop</string>
 	<key>CFBundleInfoDictionaryVersion</key>
