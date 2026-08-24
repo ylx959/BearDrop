@@ -38,6 +38,7 @@ A native macOS menu-bar companion that keeps your schedule out of your head and 
 Requires macOS 15 or later and Swift 6.2 — Xcode 26 / Command Line Tools 26 or newer. Check with `swift --version`, install with `xcode-select --install`.
 
 ```bash
+#First,create a file for BearDrop
 git clone https://github.com/ylx959/BearDrop.git
 cd BearDrop
 Scripts/package_app.sh
@@ -58,7 +59,8 @@ ParaBear never contacts anything, so it cannot tell you a new version exists. Pu
 
 ```bash
 pkill -f ParaBear                     # quit first, or `open` starts a second bear
-cd BearDrop && git pull
+cd BearDrop
+git pull
 Scripts/package_app.sh
 rm -rf /Applications/ParaBear.app
 cp -R .build/ParaBear.app /Applications/
