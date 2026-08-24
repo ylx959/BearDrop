@@ -33,12 +33,18 @@ A native macOS menu-bar companion that keeps your schedule out of your head and 
 - **Call ParaBear** — fly it now, with whatever is actually coming up
 - **Quit ParaBear**
 
+## Requirements
+
+- macOS 15 or later
+- Swift 6.2 — Xcode 26 / Command Line Tools 26 or newer
+(Check with `swift --version`, install with `xcode-select --install`)
+- Calendar.app with at least one calendar configured
+- No paid Apple Developer account needed — just clone, build, and run.
+
 ## Install
 
-Requires macOS 15 or later and Swift 6.2 — Xcode 26 / Command Line Tools 26 or newer. Check with `swift --version`, install with `xcode-select --install`.
-
 ```bash
-#First,create a file for BearDrop
+#First,you can create a file for BearDrop
 git clone https://github.com/ylx959/BearDrop.git
 cd BearDrop
 Scripts/package_app.sh
@@ -51,7 +57,6 @@ ParaBear has no window: it lives as the paw-print calendar in the menu bar, and 
 
 Calendars come from whatever Apple's Calendar app reads: add accounts once in **System Settings → General → Internet Accounts** and Google, iCloud, Exchange and CalDAV all appear.
 
-Launch at login: **System Settings → General → Login Items & Extensions → Open at Login → +**, and pick `/Applications/ParaBear.app`.
 
 ## Updating
 
