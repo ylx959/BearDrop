@@ -61,7 +61,9 @@ final class MenuBarController {
         menu.addItem(NSMenuItem.separator())
 
         // "Call", not "Test": this flies the bear with whatever is actually in the next hour on
-        // it, so it is a way to ask the bear what is coming — not a rehearsal of one.
+        // it, so it is a way to ask the bear what is coming — not a rehearsal of one. Which is why
+        // the call re-reads the calendar before launching (`EventTimelineViewModel.refreshNow`):
+        // an answer up to a poll old is a rehearsal of the last one.
         let callItem = NSMenuItem(title: "Call ParaBear", action: #selector(callBear), keyEquivalent: "")
         callItem.image = NSImage(systemSymbolName: "pawprint.fill", accessibilityDescription: "Call ParaBear")
         callItem.target = self

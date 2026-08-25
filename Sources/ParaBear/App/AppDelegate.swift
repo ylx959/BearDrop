@@ -42,7 +42,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             calendarService: calendarService,
             onCallBear: { [weak self] in
                 guard let self else { return }
-                self.overlayWindowController?.playReminderFlight(duration: self.settings.plannedFlightSpeed.flightDuration)
+                // Detect first, fly second. The card reads the view model live, so a flight
+                // launched before the refresh goes out carrying the last poll's answer and then
+                // switches under itself mid-descent — the same reason the last milestone retires
+                // its event before launching rather than after.
+                Task { @MainActor in
+                    await self.timelineViewModel?.refreshNow()
+                    self.overlayWindowController?.playReminderFlight(duration: self.settings.plannedFlightSpeed.flightDuration)
+                }
             },
             onHideBear: { [weak self] in self?.overlayWindowController?.hide() },
             onOpenSettings: {

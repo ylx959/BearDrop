@@ -65,6 +65,19 @@ final class EventTimelineViewModel: ObservableObject {
         }
     }
 
+    /// Re-reads the calendar and settles the answer *now*, for "Call ParaBear".
+    ///
+    /// The poll runs once a minute, so what the view model holds can be up to a minute old — long
+    /// enough for the whole next-hour window to have changed, and a call is a question about that
+    /// window rather than a request to repeat the last poll's answer. Retirement is deliberately
+    /// left alone: an event the bear has already handed over stays handed over, so calling it back
+    /// cannot resurrect a meeting that is done with.
+    func refreshNow() async {
+        await calendarService.refresh()
+        selectNextEvent()
+        recalculateCountdown()
+    }
+
     /// Pins the remark, so `GreetingSnapshot` can render the longest one — the case the bubble's
     /// width is chosen on — rather than whichever line the shuffle happened to land on.
     func showRemarkForSnapshot(_ remark: String) {

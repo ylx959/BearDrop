@@ -73,7 +73,11 @@ struct ParachuteEventCard: View {
             return "Allow access in Settings"
         }
         guard let event else {
-            return "No more events today"
+            // The one thing this card must not do is overstate what it knows. `CalendarService`
+            // reads the next hour and nothing beyond it, so "no more events today" is a claim
+            // about the rest of the day that nothing here checked — and a 2pm meeting sitting
+            // behind an empty hour makes it a lie the bear delivers by parachute.
+            return "Nothing in the next hour"
         }
         return EventTimelineViewModel.timeString(for: event.startDate)
     }
