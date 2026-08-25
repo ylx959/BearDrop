@@ -31,6 +31,7 @@ A native macOS menu-bar companion that keeps your schedule out of your head and 
 - **Times** — how many flights fit in it: 1, 2 or 3
 - **Drop speed** — Slow / Normal / Fast
 - **Appearance** — Light or Dark
+- **Open at login** — start ParaBear with the Mac
 - **Call ParaBear** — fly it now, with whatever is actually coming up
 - **Quit ParaBear**
 
@@ -85,6 +86,8 @@ Expect macOS to ask for Calendar access again — an ad-hoc signature pins permi
 - **"Apple could not verify ParaBear is free of malware"** — that is a downloaded `.app`, not one you built.
 
 Uninstall:
+
+Switch **Open at login** off first, so macOS is not left trying to start an app that has gone.
 
 ```bash
 pkill -f ParaBear

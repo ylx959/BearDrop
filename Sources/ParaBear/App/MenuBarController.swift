@@ -2,7 +2,7 @@ import AppKit
 import Combine
 
 @MainActor
-final class MenuBarController {
+final class MenuBarController: NSObject {
     private let statusItem: NSStatusItem
     private let settings: SettingsStore
     private let calendarService: CalendarService
@@ -31,6 +31,7 @@ final class MenuBarController {
     )
     private let reminderSummary = NSTextField(labelWithString: "")
     private let appearanceToggle: AppearanceToggleView
+    private let loginItemToggle = LoginToggleView(isOn: LoginItem.isEnabled)
 
     init(
         settings: SettingsStore,
@@ -45,6 +46,7 @@ final class MenuBarController {
         self.onOpenSettings = onOpenSettings
         appearanceToggle = AppearanceToggleView(scheme: settings.appearance)
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        super.init()
 
         if let button = statusItem.button {
             button.image = MenuBarIcon.pawCalendar()
@@ -58,6 +60,7 @@ final class MenuBarController {
         menu.addItem(customItem(view: reminderSummaryRow()))
         menu.addItem(customItem(view: speedRow()))
         menu.addItem(customItem(view: appearanceRow()))
+        menu.addItem(customItem(view: loginItemRow()))
         menu.addItem(NSMenuItem.separator())
 
         // "Call", not "Test": this flies the bear with whatever is actually in the next hour on
@@ -77,6 +80,9 @@ final class MenuBarController {
         menu.addItem(quitItem)
 
         statusItem.menu = menu
+        // The login item is the one setting macOS can change behind the app's back, so the menu
+        // asks it again on the way open rather than trusting what it drew last time.
+        menu.delegate = self
         bindCalendarStatus()
 
         // The toggle is built once but the setting it shows is not only ours to change, so it
@@ -127,7 +133,7 @@ final class MenuBarController {
         leadControl.action = #selector(reminderLeadChanged)
         leadControl.selectedSegment = ReminderLead.allCases.firstIndex(of: settings.reminderLead) ?? 1
 
-        return settingRow(title: "First reminder", control: leadControl)
+        return MenuRow.make(title: "First reminder", control: leadControl)
     }
 
     private func reminderCountRow() -> NSView {
@@ -135,7 +141,7 @@ final class MenuBarController {
         countControl.action = #selector(reminderCountChanged)
         countControl.selectedSegment = ReminderCount.allCases.firstIndex(of: settings.reminderCount) ?? 2
 
-        return settingRow(title: "Times", control: countControl)
+        return MenuRow.make(title: "Times", control: countControl)
     }
 
     /// The two controls above state the *inputs* to the rule — a lead and a count — and leave the
@@ -162,54 +168,39 @@ final class MenuBarController {
         return row
     }
 
-    /// The shape all three segmented rows share. They were three copies of the same eleven lines,
-    /// and three copies are three places for the insets to drift apart.
-    private func settingRow(title: String, control: NSSegmentedControl) -> NSView {
-        let label = NSTextField(labelWithString: title)
-        label.font = .systemFont(ofSize: 11, weight: .medium)
-        label.textColor = .secondaryLabelColor
-
-        control.segmentStyle = .rounded
-        control.controlSize = .small
-
-        let row = NSStackView(views: [label, control])
-        row.orientation = .horizontal
-        row.alignment = .centerY
-        row.distribution = .fill
-        row.spacing = 12
-        row.edgeInsets = NSEdgeInsets(top: 4, left: 12, bottom: 8, right: 10)
-        row.frame = NSRect(x: 0, y: 0, width: 210, height: 34)
-        label.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        control.setContentHuggingPriority(.required, for: .horizontal)
-        return row
-    }
-
     private func speedRow() -> NSView {
         speedControl.target = self
         speedControl.action = #selector(speedChanged)
         speedControl.selectedSegment = PlannedFlightSpeed.allCases.firstIndex(of: settings.plannedFlightSpeed) ?? 2
 
-        return settingRow(title: "Drop speed", control: speedControl)
+        return MenuRow.make(title: "Drop speed", control: speedControl)
     }
 
     private func appearanceRow() -> NSView {
-        let title = NSTextField(labelWithString: "Appearance")
-        title.font = .systemFont(ofSize: 11, weight: .medium)
-        title.textColor = .secondaryLabelColor
-
         appearanceToggle.onChange = { [weak self] appearance in
             self?.settings.appearance = appearance
         }
 
-        let row = NSStackView(views: [title, appearanceToggle])
-        row.orientation = .horizontal
-        row.alignment = .centerY
-        row.distribution = .fill
-        row.spacing = 12
-        row.edgeInsets = NSEdgeInsets(top: 4, left: 12, bottom: 8, right: 12)
-        row.frame = NSRect(x: 0, y: 0, width: 210, height: 38)
-        title.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        appearanceToggle.setContentHuggingPriority(.required, for: .horizontal)
+        return MenuRow.make(title: "Appearance", control: appearanceToggle, height: 38, rightInset: 12)
+    }
+
+    /// Whether ParaBear opens itself at login — see `LoginItem`, which is also why this row is the
+    /// only one that reads its value back from somewhere other than `SettingsStore`.
+    ///
+    /// It sits below "Appearance" because it is the only setting here that is not about the flight:
+    /// the rows above say what the bear does, this one says whether it is here at all. And it is
+    /// the same switch as the one above — `MenuToggleView` — so the two agree on size and shape by
+    /// being one control rather than by two sets of numbers happening to match.
+    private func loginItemRow() -> NSView {
+        loginItemToggle.onChange = { [weak self] isOn in
+            self?.setLoginItem(isOn)
+        }
+        loginItemToggle.isEnabled = LoginItem.isAvailable
+
+        let row = MenuRow.make(title: "Open at login", control: loginItemToggle, height: 38, rightInset: 12)
+        // Only ever seen from `swift run`, where there is no bundle for `launchd` to open. A switch
+        // that simply refuses to move says nothing about why.
+        row.toolTip = LoginItem.isAvailable ? nil : "Available in the packaged app, not from swift run."
         return row
     }
 
@@ -265,6 +256,19 @@ final class MenuBarController {
         settings.reminderCount = ReminderCount.allCases[index]
     }
 
+    /// The switch is set from what the system says afterwards, never from what was clicked: asking
+    /// to open at login is a request, and `.requiresApproval` is macOS answering "not while the
+    /// user has me switched off in Login Items". The only useful thing left to do then is show them
+    /// the list, since nothing the app can call gets it back off that footing.
+    private func setLoginItem(_ wanted: Bool) {
+        let granted = LoginItem.setEnabled(wanted)
+        loginItemToggle.setOn(granted)
+
+        if wanted && !granted && LoginItem.needsApproval {
+            LoginItem.openSystemSettings()
+        }
+    }
+
     @objc private func speedChanged() {
         let index = speedControl.selectedSegment
         guard PlannedFlightSpeed.allCases.indices.contains(index) else { return }
@@ -273,5 +277,19 @@ final class MenuBarController {
 
     @objc private func quit() {
         NSApp.terminate(nil)
+    }
+}
+
+extension MenuBarController: NSMenuDelegate {
+    /// Login Items lives in System Settings as much as it does here, so the row is re-read rather
+    /// than remembered — the switch has to agree with the system on the way open even when the last
+    /// thing to change it was not this menu.
+    ///
+    /// Without the slide: this is the menu arriving already in that state, not the setting changing
+    /// as you watch, and a knob travelling on the way open reads as the app having just done
+    /// something.
+    func menuWillOpen(_ menu: NSMenu) {
+        loginItemToggle.isEnabled = LoginItem.isAvailable
+        loginItemToggle.setOn(LoginItem.isEnabled, animated: false)
     }
 }
